@@ -257,20 +257,20 @@ namespace qpbranch {
 	    ptr->cs_[2] = Nt*ii*(1.0*nA);
 	    ptr->ns_[2] = nA;
 	  }
-	} else if(*it==kOpP2) {	  
-	  ptr->cs_(0) = Nt*(-4.0*gA*gA);
+	} else if(*it==kOpP2) {
 	  ptr->ns_(0) = nA+2;
-	  ptr->cs_(1) = Nt*(4.0*ii*gA*pA);
+	  ptr->cs_(0) = Nt*(-4.0*gA*gA);
 	  ptr->ns_(1) = nA+1;
-	  ptr->cs_(2) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
+	  ptr->cs_(1) = Nt*(4.0*ii*gA*pA);
 	  ptr->ns_(2) = nA;
+	  ptr->cs_(2) = Nt*(2.0*gA*(nA+1.0) + 2.0*nA*gA + pA*pA);
 	  if(nA>0) {
-	    ptr->cs_(3) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
-	    ptr->ns_(3) = nA;
+	    ptr->ns_(3) = nA-1;
+	    ptr->cs_(3) = Nt*(-2.0*nA*ii*pA);
 	  }
 	  if(nA>1) {
-	    ptr->cs_(4) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
-	    ptr->ns_(4) = nA;
+	    ptr->ns_(4) = nA-2;
+	    ptr->cs_(4) = Nt*(-nA*(nA-1.0));
 	  }
 	} else if(*it==kOpdR) {
 	  ptr->cs_(0) = Nt*2.0*gA;

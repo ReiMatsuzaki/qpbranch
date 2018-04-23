@@ -115,5 +115,41 @@ TEST(utest_pwgto, multipole0) {
   delete basis;
 }
 TEST(utest_pwgto, test_harmonic) {
+  int num = 4;
+  double x0 = 0.3d;
+  double k = 0.39;
+  double m = 2.0;
+  double w = sqrt(k/m);
 
+  VectorXi ns(num); ns << 0, 1, 2, 3;
+  vector<Operator> ops = {kOp0, kOp2, kOpP2};
+  PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
+
+  complex<double> g = m*w/2;
+  basis->gs_ = VectorXcd::Ones(num)*g;
+  basis->Rs_ = VectorXd::Ones(num )*x0;
+  basis->Ps_ = VectorXd::Zero(num);
+  basis->setup();
+
+  MatrixXcd P2(num,num), R2(num,num), H(num,num), S(num,num);
+
+  basis->overlap(kOp0, kOp0,  &S);
+  basis->overlap(kOp0, kOp2,  &P2);
+  basis->overlap(kOp0, kOpP2, &R2);
+  H = P2/(2*m) + k/2*R2;
+
+  cout << "H:" << endl;
+  cout << H << endl;
+  cout << "w:" << endl;
+  cout << w /2 << endl;
+
+  GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
+  es.compute(H, S);
+
+  cout << "Es:" << endl;
+  cout << es.eigenvalues() << endl;
+
+  ASSERT_DOUBLE_EQ(w/2, es.eigenvalues()(0));
+  
+  delete basis;  
 }

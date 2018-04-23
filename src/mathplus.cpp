@@ -24,4 +24,18 @@ namespace qpbranch {
     }
     
   }
+  void gammaint_nhalf(int maxn, VectorXcd *res) {
+    /*
+      gives {Gamma(n+1/2) | n = 0,...,maxn}
+    */
+
+    assert(maxn >= 0);
+    assert(res->size() >= maxn+1);
+    
+    (*res)(0) = sqrt(M_PI);
+    for(int n = 0; n < maxn; n++) {
+      (*res)(n+1) = (n+0.5) * (*res)(n);
+    }    
+  }
+  
 }
