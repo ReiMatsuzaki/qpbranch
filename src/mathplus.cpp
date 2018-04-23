@@ -1,6 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include "mathplus.hpp"
+#include <Eigen/Core>
 
 namespace qpbranch {
   using namespace std;

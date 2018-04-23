@@ -2,7 +2,7 @@
 SRC=${QPBRANCH_ROOT}/src
 BUILD=${QPBRANCH_ROOT}/build
 EXTERNAL=${QPBRANCH_ROOT}/external
-EIGEN=${EXTERNAL}/eigen-git-mirror/Eigen
+EIGEN=${EXTERNAL}/eigen-git-mirror
 VPATH=${BUILD}:${SRC}
 
 # -- options --

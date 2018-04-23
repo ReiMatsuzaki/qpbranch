@@ -1,5 +1,5 @@
 #include <complex>
-#include <Eigen>
+#include <Eigen/Core>
 
 namespace qpbranch {
   using Eigen::VectorXcd;

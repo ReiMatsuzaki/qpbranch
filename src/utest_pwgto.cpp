@@ -1,4 +1,5 @@
 #include <iostream>
+#include <Eigen/Eigenvalues>
 #include <gtest/gtest.h>
 #include "mathplus.hpp"
 #include "pwgto.hpp"

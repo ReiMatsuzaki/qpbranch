@@ -1,5 +1,5 @@
 #include <iostream>
-#include <Eigen>
+#include <Eigen/Core>
 #include <vector>
 #include <map>
 #include <boost/multi_array.hpp>
