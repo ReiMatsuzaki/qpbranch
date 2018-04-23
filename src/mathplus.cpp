@@ -1,19 +1,19 @@
+#include <iostream>
 #include <math.h>
 #include "mathplus.hpp"
 
 namespace qpbranch {
+  using namespace std;
   using std::complex;
   using std::runtime_error;
+  using std::invalid_argument;
   void gtoint2n(int maxn, complex<double> z, VectorXcd *res) {
     /* 
        gives the integrations : { Int_{-oo}^{+oo} x^{2n}Exp[-zx^2] dx | n = 0,...,maxn}
     */
-    if(maxn < 0) {
-      throw runtime_error("maxn < 0");
-    }
-    if(res->size() < maxn+1) {
-      throw runtime_error("invalid size");
-    }
+
+    assert(maxn >= 0);
+    assert(res->size() >= maxn+1);
 
     (*res)(0) = sqrt(M_PI/z);
     if(maxn == 0)
