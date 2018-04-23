@@ -19,43 +19,33 @@ namespace qpbranch {
 				   int nA, int nB, int Nk);
 		
   enum Operator {
-    kNone, kOp0, kOp1, kOp2, kOpR1, kOpR2
+    kNone, kOp0, kOp1, kOp2, kOpP1, kOpP2, kOpdR, kOpdP, kOpdgr, kOpdgi
   };
   
   class OpBasis {
   public:
-    int num_;
-    MatrixXcd cs_; // cs[iop,A]
-    MatrixXi  ns_; // ns[iop,A]    
-    OpBasis(int np, int nb);
-    static int maxn(Operator op, int n) {
-      if(op==kOp0)
-	return n;
-      else if(op==kOp1)
-	return n+1;
-      else if(op==kOp2)
-	return n+2;
-      else
-	assert("unsupported operator");
-    }
+    int num_;    
+    VectorXcd cs_;
+    VectorXi  ns_;
+    OpBasis(int num);
   };
-  
+ 
   class GaussBasis {
   public:
     GaussBasis(const VectorXi& ns, const vector<Operator>& ops);
     // - data size -
-    int num_;
+    int num_, nop_;
     // - variable -
     VectorXi ns_;
     VectorXcd gs_;
     VectorXd Rs_, Ps_;
     vector<Operator> ops_;
     // - operatorator -
-    map<Operator, OpBasis*> op_basis_;
+    map<Operator, vector<OpBasis*> > op_basis_;
     VectorXd Ns_;
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
-    //    multi_array<complex<double>,5> *d_; // d(A,B,nA,nB,N)
     VectorXi maxn_;
+    //    multi_array<complex<double>,5> *d_; // d(A,B,nA,nB,N)
     multi_array<multi_array<complex<double>,3>*,2> *d_;
     virtual ~GaussBasis();
     virtual void setup();

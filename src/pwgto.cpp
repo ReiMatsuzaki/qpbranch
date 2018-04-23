@@ -70,25 +70,91 @@ namespace qpbranch {
     }    
   }
   
-  OpBasis::OpBasis(int np, int nb) : num_(np), cs_(np, nb), ns_(np, nb) {}
+  OpBasis::OpBasis(int num) : num_(num), cs_(num), ns_(num) {}
+
+  int num_op_basis(Operator op, int n) {
     
+    if(op==kOp0 || op==kOp1 || op==kOp2) {
+      return 1;
+    } else if(op==kOpP1) {
+      if(n==0)
+	return 2;
+      else
+	return 3;
+    } else if(op==kOpP2) {
+      if(n==0)
+	return 3;
+      else if(n==1)
+	return 4;
+      else
+	return 5;
+    } else if(op==kOpdR) {
+      if(n==0)
+	return 2;
+      else
+	return 3;
+    } else if(op==kOpdP) {
+      return 1;
+    } else if(op==kOpdgr) {
+      return 2;
+    } else if(op==kOpdgi) {
+      return 1;
+    } else {
+      assert(false||"unsupported");
+    }
+  }
+  int maxn_op_basis(Operator op, int n) {
+    if(op==kOp0) {
+      return n;
+    } else if(op==kOp1) {
+      return n+1;
+    } else if(op==kOp2) {
+      return n+2;
+    } else if(op==kOpP1) {
+      return n+1;
+    } else if(op==kOpP2) {
+      return n+2;
+    } else if(op==kOpdR) {
+      return n+1;
+    } else if(op==kOpdP) {
+      return n+1;
+    } else if(op==kOpdgr) {
+      return n+2;
+    } else if(op==kOpdgi) {
+      return n+2;
+    } else {
+      assert(false||"unsupported");
+    }
+  }
+  double calc_nterm(int nd, int nA, double gA) {
+    /*
+      give difference of normalization term
+       (d/d(Re[g]))^(nd)N(t)
+     where
+       N(t) = 1/sqrt(S)
+       S = Int_{-oo}^{+oo} x^{2n} exp[-2Re[g]x^2] dx.
+    overlap S can be expressed by Gamma function
+       S = (2Re[g])^{-n-1/2} Gamma[n+1/2]
+     So, normalization term N becomes
+       N = (2Re[g])^{n/2+1/4} Sqrt(1/Gamma[n+1/2])
+    */
+    assert(false||"not impl");
+    return 0.0;
+  }
+  
   GaussBasis::GaussBasis(const VectorXi& ns, const vector<Operator>& ops):
-    num_(ns.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_), ops_(ops),
-    Ns_(num_),
+    num_(ns.size()), nop_(ops.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_), ops_(ops),
+    Ns_(num_), 
     gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_), maxn_(num_) {
 
     for(int A = 0; A < num_; A++) {
-      int maxn = 0;
-      for(auto it = ops.begin(); it != ops.end(); ++it) {
-	int maxn0 = OpBasis::maxn(*it, ns_[A]);
-	if(maxn<maxn0) maxn=maxn0;
+      for(auto it = ops.begin(); it!=ops.end(); ++it) {
+	int npoly = num_op_basis(*it, ns_(A));
+	OpBasis *ptr = new OpBasis(npoly);
+	op_basis_[*it].push_back(ptr);
+	maxn_[A] = maxn_op_basis(*it, ns_(A));
       }
-      maxn_[A] = maxn;
     }
-
-    //    for(auto it = ops.begin(); it!=ops.end(); ++it) {
-    //      op_basis_[*it] = new OpBasis(OpBasis::maxn(*it, ns), num_);
-    //    }
     
     d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
     for(int A = 0; A < num_; A++) {
@@ -111,20 +177,13 @@ namespace qpbranch {
     
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {	
-	OpBasis *bra = op_basis_[ibra];
-	OpBasis *ket = op_basis_[iket];
+	OpBasis *bra = op_basis_[ibra][A];
+	OpBasis *ket = op_basis_[iket][B];
 	complex<double> cumsum(0);
 
 	for(int i = 0; i < bra->num_; i++) {
 	  for(int j = 0; j < ket->num_; j++) {
-	    cumsum += bra->cs_(i,A)*ket->cs_(j,B)*getd(A,B,bra->ns_(i,A),ket->ns_(j,B),0);
-	    /*
-	    if(ibra==kOp0 && iket==kOp1 && A==0 && B==1 ||
-	       ibra==kOp1 && iket==kOp0 && A==0 && B==1 ) {	       
-	      cerr << bra->cs_(i,A) << ket->cs_(j,B) << getd(A,B,bra->ns_(i,A),ket->ns_(j,B),0)<<endl;
-	      cerr <<A<<B<<bra->ns_(i,A) << ket->ns_(j,B) << endl;
-	    }
-	    */
+	    cumsum += bra->cs_(i)*ket->cs_(j)*getd(A,B,bra->ns_(i),ket->ns_(j),0);
 	  }
 	}
 	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
@@ -172,22 +231,70 @@ namespace qpbranch {
     }    
   }
   void GaussBasis::setup_operator() {
-    
-    for(auto it = ops_.begin(); it != ops_.end(); ++it) {
-      if(*it==kOp0) {
-	op_basis_[*it] = new OpBasis(1, num_);
-	op_basis_[*it]->cs_.row(0) = Ns_;
-	op_basis_[*it]->ns_.row(0) = ns_;
-      } else if(*it==kOp1) {
-	op_basis_[*it] = new OpBasis(1, num_);
-	op_basis_[*it]->cs_.row(0) = Ns_;
-	op_basis_[*it]->ns_.row(0) = ns_ + VectorXi::Ones(num_);
-      } else if(*it==kOp2) {
-	op_basis_[*it] = new OpBasis(1, num_);
-	op_basis_[*it]->cs_.row(0) = Ns_;
-	op_basis_[*it]->ns_.row(0) = ns_ + VectorXi::Ones(num_) * 2;
-      } else {
-	assert(false&&"unsupported operator");	  
+    complex<double> ii(0, 1);
+    for(int A = 0; A < num_; A++) {
+      int nA = ns_[A];
+      complex<double> Nt = Ns_[A];
+      complex<double> gA = gs_[A];
+      double pA = Ps_[A];
+      for(auto it = ops_.begin(); it != ops_.end(); ++it) {
+	OpBasis *ptr = op_basis_[*it][A];
+	if(*it==kOp0) {
+	  ptr->cs_[0] = Nt;
+	  ptr->ns_[0] = nA;
+	} else if(*it==kOp1) {
+	  ptr->cs_[0] = Nt;
+	  ptr->ns_[0] = nA+1;
+	} else if(*it==kOp2) {
+	  ptr->cs_[0] = Nt;
+	  ptr->ns_[0] = nA+2;
+	} else if(*it==kOpP1) {
+	  ptr->cs_[0] = Nt;
+	  ptr->ns_[0] = nA;
+	  ptr->cs_[1] = Nt;
+	  ptr->ns_[1] = nA*Ps_[A];
+	  if(nA!=0) {
+	    ptr->cs_[2] = Nt*ii*(1.0*nA);
+	    ptr->ns_[2] = nA;
+	  }
+	} else if(*it==kOpP2) {	  
+	  ptr->cs_(0) = Nt*(-4.0*gA*gA);
+	  ptr->ns_(0) = nA+2;
+	  ptr->cs_(1) = Nt*(4.0*ii*gA*pA);
+	  ptr->ns_(1) = nA+1;
+	  ptr->cs_(2) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
+	  ptr->ns_(2) = nA;
+	  if(nA>0) {
+	    ptr->cs_(3) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
+	    ptr->ns_(3) = nA;
+	  }
+	  if(nA>1) {
+	    ptr->cs_(4) = Nt*(2.0*gA*(nA+1.0)+2.0*nA*gA+pA*pA);
+	    ptr->ns_(4) = nA;
+	  }
+	} else if(*it==kOpdR) {
+	  ptr->cs_(0) = Nt*2.0*gA;
+	  ptr->ns_(0) = nA+1;
+	  ptr->cs_(1) = Nt*(-ii*pA);
+	  ptr->ns_(1) = nA;
+	  if(nA>0) {
+	    ptr->cs_(2) = Nt*(-nA*1.0);
+	    ptr->ns_(2) = nA-1;
+	  }
+	} else if(*it==kOpdP) {
+	  ptr->cs_(0) = Nt*ii;
+	  ptr->ns_(0) = nA+1;	  
+	} else if(*it==kOpdgr) {
+	  ptr->cs_(0) = -Nt;
+	  ptr->ns_(0) = nA+2;
+	  ptr->cs_(1) = calc_nterm(1, nA, real(gA));
+	  ptr->ns_(1) = nA;
+	} else if(*it==kOpdgi) {
+	  ptr->cs_(0) = Nt*(-ii);
+	  ptr->ns_(0) = nA+2;	  
+	} else {
+	  assert(false&&"unsupported operator");	  
+	}
       }
     }    
   }
