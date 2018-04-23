@@ -190,7 +190,7 @@ namespace qpbranch {
       }
     }
   }
-  void GaussBasis::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, MatrixXcd *res) {
+  void GaussBasis::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     for (int ix = 0; ix < xs.size(); ix++) {
       complex<double> cumsum(0.0);
       complex<double> ii(0.0, 1.0);
@@ -198,6 +198,7 @@ namespace qpbranch {
 	double d = xs[ix] - Rs_[A];
 	cumsum += cs[A]*pow(d, ns_[A]) * exp(-gs_[A]*d*d - ii*Ps_[A]*d);
       }
+      (*res)(ix) = cumsum;
     }
   }
   void GaussBasis::setup_normalize() {
@@ -307,7 +308,7 @@ namespace qpbranch {
   void PlaneWaveGTO::overlap(Operator ibra, Operator iket, MatrixXcd *res) {
     GaussBasis::overlap(ibra, iket, res);
   }
-  void PlaneWaveGTO::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, MatrixXcd *res) {
+  void PlaneWaveGTO::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     GaussBasis::at(iop, cs, xs, res);
   }
 }

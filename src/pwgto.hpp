@@ -1,3 +1,6 @@
+#ifndef PWGTO_HPP_
+#define PWGTO_HPP_
+
 #include <iostream>
 #include <Eigen/Core>
 #include <vector>
@@ -50,7 +53,7 @@ namespace qpbranch {
     virtual ~GaussBasis();
     virtual void setup();
     virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res);
-    virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, MatrixXcd *res);
+    virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
@@ -67,6 +70,9 @@ namespace qpbranch {
     ~PlaneWaveGTO();
     void setup();
     void overlap(Operator ibra, Operator iket, MatrixXcd *res);
-    void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, MatrixXcd *res);
+    void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
+
 }
+
+#endif  // FOO_BAR_BAZ_H_

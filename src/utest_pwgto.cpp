@@ -1,7 +1,7 @@
 #include <iostream>
-#include <Eigen/Eigenvalues>
 #include <gtest/gtest.h>
 #include "mathplus.hpp"
+#include "eigenplus.hpp"
 #include "pwgto.hpp"
 
 using namespace std;
@@ -135,22 +135,23 @@ TEST(utest_pwgto, test_harmonic) {
   MatrixXcd P2(num,num), R2(num,num), H(num,num), S(num,num);
 
   basis->overlap(kOp0, kOp0,  &S);
-  basis->overlap(kOp0, kOp2,  &P2);
-  basis->overlap(kOp0, kOpP2, &R2);
+  basis->overlap(kOp0, kOp2,  &R2);
+  basis->overlap(kOp0, kOpP2, &P2);
   H = P2/(2*m) + k/2*R2;
 
-  cout << "H:" << endl;
-  cout << H << endl;
-  cout << "w:" << endl;
-  cout << w /2 << endl;
+  VectorXd eigs;
+  MatrixXcd U;
+  zhegv(H, S, &U, &eigs);
 
-  GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
-  es.compute(H, S);
+  int nx(3);
+  VectorXd xs(nx);
+  xs << 0.2, 0.25, 0.3;
 
-  cout << "Es:" << endl;
-  cout << es.eigenvalues() << endl;
-
-  ASSERT_DOUBLE_EQ(w/2, es.eigenvalues()(0));
+  for(int n = 0; n < num-1; n++) {
+    ASSERT_DOUBLE_EQ(w*(n+0.5), eigs(n)) << "n: " << n;
+    VectorXcd ys(nx);
+    basis->at(kOp0, U.col(n), xs, &ys);
+  }
   
   delete basis;  
 }
