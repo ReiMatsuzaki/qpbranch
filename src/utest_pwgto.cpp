@@ -5,7 +5,28 @@
 
 using namespace std;
 using namespace qpbranch;
+using namespace boost;
 
+TEST(utest_pwgto, test_coef_d) {
+  complex<double> gAB(1, 0.2);
+  complex<double> wAB(1.2, 0);
+  double RA(0.3), RB(0.3);
+  const int maxnA = 3;
+  const int maxnB = 2;
+  multi_array<complex<double>, 3> d(extents[maxnA+1][maxnB+1][maxnA+maxnB+1]);;
+  hermite_coef_d(gAB, wAB, RA, RB, maxnA, maxnB, &d);
+  
+  for(int nA=0; nA<=maxnA; nA++) {
+    for(int nB=0; nB<=maxnB; nB++) {
+      for(int Nk=0; Nk<=maxnA+maxnB; Nk++) {
+	auto ref = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB, Nk);
+	ASSERT_DOUBLE_EQ(real(ref), real(d[nA][nB][Nk])) << "nA:" << nA << endl;
+	ASSERT_DOUBLE_EQ(imag(ref), imag(d[nA][nB][Nk])) << "nA:" << nA << endl;	
+      }
+    }
+  }
+
+}
 TEST(utest_pwgto, overlap) {
   int num = 4;
   VectorXi ns(num); ns << 0, 0, 2, 2;
@@ -14,7 +35,6 @@ TEST(utest_pwgto, overlap) {
   basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
   basis->Rs_ << 0.0, 0.0, 0.2, 0.2;
   basis->Ps_ << 1.0, 0.0, 0.5, 0.5;
-  
   basis->setup();
   MatrixXcd S(num, num);
   basis->overlap(kOp0, kOp0, &S);
@@ -46,8 +66,8 @@ TEST(utest_pwgto, multipole0) {
   vector<Operator> ops = {kOp0, kOp1, kOp2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
   PlaneWaveGTO *pw_basis = new PlaneWaveGTO(ns, ops);
-  pw_basis->gs_ << 1.1, 1.1, 1.1, 0.4, 0.8;
-  pw_basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;
+  pw_basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
+  pw_basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
   pw_basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
   
   GaussBasis *basis = pw_basis;
@@ -55,26 +75,45 @@ TEST(utest_pwgto, multipole0) {
 
   MatrixXcd S(num, num);
   basis->overlap(kOp0, kOp0, &S);
-
-  MatrixXcd M01, M10;
+  
+  MatrixXcd M01(num, num);
   basis->overlap(kOp0, kOp1, &M01);
+
+  MatrixXcd M10(num, num);
   basis->overlap(kOp1, kOp0, &M10);
 
+  MatrixXcd M02(num, num);
+  basis->overlap(kOp0, kOp2, &M02);
+
+  MatrixXcd M11(num, num);
+  basis->overlap(kOp1, kOp1, &M11);
+
+  MatrixXcd M20(num, num);
+  basis->overlap(kOp2, kOp0, &M20);
+  
   for(int A = 0; A < num; A++) {
-    for(int B = 0; B < num; B++) {
-      ASSERT_DOUBLE_EQ(real(M01(A,B)), real(M10(A,B)));
-      ASSERT_DOUBLE_EQ(imag(M01(A,B)), imag(M10(A,B)));
-    }
+    auto g = conj(basis->gs_(A)) + basis->gs_(A);
+    int n = basis->ns_(A);
+    VectorXcd gg(n+1+1);
+    gtoint2n(n+1, g, &gg);
+    auto ref = gg(n+1) * pow(basis->Ns_(A), 2);
+    ASSERT_DOUBLE_EQ(real(ref), real(M20(A,A)));
+    ASSERT_DOUBLE_EQ(real(ref), real(M02(A,A)));
   }
 
-  /*
   int A = 1;
-  int B = 1;
-  VectorXcd gg(3);
-  gtoint2n(2, conj(basis->gs_(A))+basis_->gs(B), &gg);
-  auto ref  = gg((basis->ns_[A]+basis->ns_[B])/2) * basis->Ns_[A] * basis_->Ns[B];
-  auto calc = 
-  */
+  int B = 2;
+  ASSERT_DOUBLE_EQ(real(M01(A,B)), real(M10(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+  ASSERT_DOUBLE_EQ(imag(M01(A,B)), imag(M10(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+  
+  ASSERT_DOUBLE_EQ(real(M02(A,B)), real(M11(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+  ASSERT_DOUBLE_EQ(imag(M02(A,B)), imag(M11(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+  
+  ASSERT_DOUBLE_EQ(real(M20(A,B)), real(M11(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+  ASSERT_DOUBLE_EQ(imag(M20(A,B)), imag(M11(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
+
   delete basis;
 }
+TEST(utest_pwgto, test_harmonic) {
 
+}

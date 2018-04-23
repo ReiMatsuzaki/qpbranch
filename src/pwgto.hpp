@@ -14,8 +14,10 @@ namespace qpbranch {
 		  complex<double> gB, double RB, double PB, double tB,
 		  complex<double> *gAB, complex<double> *RAB, complex<double> *eP);
   void hermite_coef_d(complex<double> gP, complex<double> wP, double RA, double RB,
-		      int maxnA, int maxnB, multi_array<double, 3> *res);
-
+		      int maxnA, int maxnB, multi_array<complex<double>, 3> *res);
+  complex<double> hermite_coef_d_0(complex<double> gP, complex<double> wP, double RA, double RB,
+				   int nA, int nB, int Nk);
+		
   enum Operator {
     kNone, kOp0, kOp1, kOp2, kOpR1, kOpR2
   };
@@ -49,7 +51,7 @@ namespace qpbranch {
     VectorXd Rs_, Ps_;
     vector<Operator> ops_;
     // - operatorator -
-    vector<OpBasis*> op_basis_;
+    map<Operator, OpBasis*> op_basis_;
     VectorXd Ns_;
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     //    multi_array<complex<double>,5> *d_; // d(A,B,nA,nB,N)
@@ -59,13 +61,14 @@ namespace qpbranch {
     virtual void setup();
     virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res);
     virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, MatrixXcd *res);
+    inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
+      return (*(*d_)[A][B])[na][nb][Nk];
+    }
   protected:
     void setup_normalize();
     void setup_combination();
     void setup_operator();
-    inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
-      return (*(*d_)[A][B])[na][nb][Nk];
-    }
+    
   };
   
   class PlaneWaveGTO : public GaussBasis {

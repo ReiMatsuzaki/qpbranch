@@ -49,12 +49,32 @@ namespace qpbranch {
       }
     }
   }
+  complex<double> hermite_coef_d_0(complex<double> gAB, complex<double> wAB, double RA, double RB,
+				   int nA, int nB, int Nk) {
+    if(nA==0 && nB==0 && Nk==0)
+      return 1.0;
+    
+    if(Nk<0 || Nk>nA+nB)
+      return 0.0;
 
+    if(nA>0) {
+      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk-1);
+      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk  );
+      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk+1);
+      return 1.0/(2.0*gAB)*res0 + (wAB-RA)*res1 + (Nk+1.0)*res2;
+    } else {
+      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk-1);
+      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk  );
+      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk+1);
+      return 1.0/(2.0*gAB)*res0 + (wAB-RB)*res1 + (Nk+1.0)*res2;
+    }    
+  }
+  
   OpBasis::OpBasis(int np, int nb) : num_(np), cs_(np, nb), ns_(np, nb) {}
     
   GaussBasis::GaussBasis(const VectorXi& ns, const vector<Operator>& ops):
     num_(ns.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_), ops_(ops),
-    op_basis_(ops.size()), Ns_(num_),
+    Ns_(num_),
     gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_), maxn_(num_) {
 
     for(int A = 0; A < num_; A++) {
@@ -65,6 +85,11 @@ namespace qpbranch {
       }
       maxn_[A] = maxn;
     }
+
+    //    for(auto it = ops.begin(); it!=ops.end(); ++it) {
+    //      op_basis_[*it] = new OpBasis(OpBasis::maxn(*it, ns), num_);
+    //    }
+    
     d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {
@@ -80,14 +105,29 @@ namespace qpbranch {
   }
   void GaussBasis::overlap(Operator ibra, Operator iket, MatrixXcd *res) {
     /* compute overlap matrix. */
-    assert(ibra==kOp0);
-    assert(iket==kOp0);
-   
+
+    assert(res->rows()>=num_);
+    assert(res->cols()>=num_);
+    
     for(int A = 0; A < num_; A++) {
-      for(int B = 0; B < num_; B++) {
+      for(int B = 0; B < num_; B++) {	
+	OpBasis *bra = op_basis_[ibra];
+	OpBasis *ket = op_basis_[iket];
 	complex<double> cumsum(0);
-	cumsum = Ns_(A)*Ns_(B)*eAB_(A,B)*hAB_(A,B)*getd(A,B,ns_[A],ns_[B],0);
-	(*res)(A,B) = cumsum;
+
+	for(int i = 0; i < bra->num_; i++) {
+	  for(int j = 0; j < ket->num_; j++) {
+	    cumsum += bra->cs_(i,A)*ket->cs_(j,B)*getd(A,B,bra->ns_(i,A),ket->ns_(j,B),0);
+	    /*
+	    if(ibra==kOp0 && iket==kOp1 && A==0 && B==1 ||
+	       ibra==kOp1 && iket==kOp0 && A==0 && B==1 ) {	       
+	      cerr << bra->cs_(i,A) << ket->cs_(j,B) << getd(A,B,bra->ns_(i,A),ket->ns_(j,B),0)<<endl;
+	      cerr <<A<<B<<bra->ns_(i,A) << ket->ns_(j,B) << endl;
+	    }
+	    */
+	  }
+	}
+	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
       }
     }
   }
@@ -117,7 +157,7 @@ namespace qpbranch {
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {
 	auto cgA = conj(gs_(A));
-	auto  gB = gs_(B);
+	auto gB = gs_(B);
 	auto RA = Rs_[A]; auto RB = Rs_[B]; auto PA = Ps_[A]; auto PB = Ps_[B];
 	gAB_(A,B) = cgA + gB;
 	RAB_(A,B) = (2.0*cgA*RA + 2.0*gB*RB - ii*PA + ii*PB) / (2.0*gAB_(A,B));
@@ -125,13 +165,9 @@ namespace qpbranch {
 			+ii*RA*PA - ii*PB*RB
 			+gAB_(A,B)*pow(RAB_(A,B), 2));
 	hAB_(A,B) = sqrt(M_PI/gAB_(A,B));
-	/*
-	if(A+B==1) {
-	  cerr << eAB_(A,B) << RAB_(A,B) << pow(RAB_(A,B), 2) << endl;
-	}
-	*/
+	
 	hermite_coef_d(gAB_(A,B), RAB_(A,B), Rs_[A], Rs_[B],
-		       ns_[A], ns_[B], (*d_)[A][B]);
+		       maxn_[A], maxn_[B], (*d_)[A][B]);
       }
     }    
   }
@@ -139,20 +175,17 @@ namespace qpbranch {
     
     for(auto it = ops_.begin(); it != ops_.end(); ++it) {
       if(*it==kOp0) {
-	OpBasis *ptr = new OpBasis(1, num_);
-	ptr->cs_.row(0) = Ns_;
-	ptr->ns_.row(0) = ns_;
-	op_basis_[kOp0] = ptr;
+	op_basis_[*it] = new OpBasis(1, num_);
+	op_basis_[*it]->cs_.row(0) = Ns_;
+	op_basis_[*it]->ns_.row(0) = ns_;
       } else if(*it==kOp1) {
-	OpBasis *ptr = new OpBasis(1, num_);
-	ptr->cs_.row(0) = Ns_;
-	ptr->ns_.row(0) = ns_ + VectorXi::Ones(num_);
-	op_basis_[kOp0] = ptr;
+	op_basis_[*it] = new OpBasis(1, num_);
+	op_basis_[*it]->cs_.row(0) = Ns_;
+	op_basis_[*it]->ns_.row(0) = ns_ + VectorXi::Ones(num_);
       } else if(*it==kOp2) {
-	OpBasis *ptr = new OpBasis(1, num_);
-	ptr->cs_.row(0) = Ns_;
-	ptr->ns_.row(0) = ns_ + 2*VectorXi::Ones(num_);
-	op_basis_[kOp0] = ptr;
+	op_basis_[*it] = new OpBasis(1, num_);
+	op_basis_[*it]->cs_.row(0) = Ns_;
+	op_basis_[*it]->ns_.row(0) = ns_ + VectorXi::Ones(num_) * 2;
       } else {
 	assert(false&&"unsupported operator");	  
       }

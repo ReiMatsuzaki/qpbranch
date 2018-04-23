@@ -7,7 +7,7 @@ LDFLAGS += -L${GTEST}
 INCLUDE += -I${GTEST}/include
 
 
-CXXFLAGS=-O0 -d -Wall
+CXXFLAGS=-O0 -d -W
 
 ${BUILD}/utest_pwgto.x: ${BUILD}/mathplus.o ${BUILD}/pwgto.o ${BUILD}/utest_pwgto.o
 ${BUILD}/utest_math.x:  ${BUILD}/mathplus.o  ${BUILD}/utest_math.o
