@@ -155,3 +155,25 @@ TEST(utest_pwgto, test_harmonic) {
   
   delete basis;  
 }
+TEST(utest_pwgto, test_gausspot) {
+
+  int num = 1;
+  VectorXi ns(num); ns << 0;
+  vector<Operator> ops = {kOp0, kOpdR};
+  PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
+  basis->gs_ << 100.0;
+  basis->Rs_ << 2.3;
+  basis->setup();
+
+  complex<double> b(1.3);
+  complex<double> v0(1.2);
+  MatrixXcd V(num,num);
+  basis->gausspot(kOp0, kOp0, b, &V);
+  V *= v0;
+  complex<double> ref = v0 * exp(-b*pow(basis->Rs_(0), 2));
+  
+  ASSERT_NEAR(real(ref), real(V(0,0)), pow(10.0, -5));
+
+  delete basis;
+  
+}

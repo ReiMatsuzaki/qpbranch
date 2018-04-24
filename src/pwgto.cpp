@@ -72,6 +72,7 @@ namespace qpbranch {
   
   OpBasis::OpBasis(int num) : num_(num), cs_(num), ns_(num) {}
 
+  /** utils functions */
   int num_op_basis(Operator op, int n) {
     
     if(op==kOp0 || op==kOp1 || op==kOp2) {
@@ -189,6 +190,42 @@ namespace qpbranch {
 	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
       }
     }
+  }
+  void GaussBasis::gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *ptr_res) {
+    /* compute matrix element of gauss type potential
+       .   res(A,B) = <gA|V|gB>,
+       where
+       .   V = exp[-bq^2].
+     */
+    
+    MatrixXcd& res(*ptr_res);
+    assert(res.rows()>=num_);
+    assert(res.cols()>=num_);
+    
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {		
+	OpBasis *bra = op_basis_[ibra][A];
+	OpBasis *ket = op_basis_[iket][B];
+
+	int nA_nB = bra->ns_.maxCoeff() + ket->ns_.maxCoeff();
+
+	VectorXcd intg(nA_nB+1);
+	dwn_gaussint_shift(nA_nB, b, gAB_(A,B), RAB_(A,B), &intg);
+
+	complex<double> cumsum(0);
+	for(int i = 0; i < bra->num_; i++) {
+	  for(int j = 0; j < ket->num_; j++) {
+	    complex<double> cumsum1(0);
+	    int nA(bra->ns_[i]);
+	    int nB(ket->ns_[j]);
+	    for(int N = 0; N <= nA_nB; N++) 
+	      cumsum1 += getd(A,B,nA,nB,N) * intg(N);
+	    cumsum += cumsum1 * conj(bra->cs_(i)) * ket->cs_(j);
+	  }
+	}
+	res(A,B) = cumsum;
+      }
+    }    
   }
   void GaussBasis::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     for (int ix = 0; ix < xs.size(); ix++) {

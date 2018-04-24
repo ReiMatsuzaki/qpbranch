@@ -20,7 +20,27 @@ namespace qpbranch {
 		      int maxnA, int maxnB, multi_array<complex<double>, 3> *res);
   complex<double> hermite_coef_d_0(complex<double> gP, complex<double> wP, double RA, double RB,
 				   int nA, int nB, int Nk);
-		
+
+    /*
+  class OperatorForGauss {
+  public:
+
+    static Operator* Op0();
+    static Operator* Op1();
+    static Operator* Op2();
+    static Operator* OpP1();
+    static Operator* OpP2();
+    static Operator* OpdR();
+    static Operator* OpdP();
+    static Operator* Opdgr();
+    static Operator* Opdgr();
+
+    virtual int num_poly(int n);
+    virtual int maxn(int n);
+    virtual void calc_
+  };
+    */
+  
   enum Operator {
     kNone, kOp0, kOp1, kOp2, kOpP1, kOpP2, kOpdR, kOpdP, kOpdgr, kOpdgi
   };
@@ -53,6 +73,7 @@ namespace qpbranch {
     virtual ~GaussBasis();
     virtual void setup();
     virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res);
+    virtual void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res);
     virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
