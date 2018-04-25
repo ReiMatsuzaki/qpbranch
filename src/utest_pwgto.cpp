@@ -162,7 +162,7 @@ TEST(utest_pwgto, test_gausspot) {
   vector<Operator> ops = {kOp0, kOpdR};
   PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
   basis->gs_ << 100.0;
-  basis->Rs_ << 2.3;
+  basis->Rs_ << 0.3;
   basis->setup();
 
   complex<double> b(1.3);
@@ -170,10 +170,19 @@ TEST(utest_pwgto, test_gausspot) {
   MatrixXcd V(num,num);
   basis->gausspot(kOp0, kOp0, b, &V);
   V *= v0;
-  complex<double> ref = v0 * exp(-b*pow(basis->Rs_(0), 2));
-  
-  ASSERT_NEAR(real(ref), real(V(0,0)), pow(10.0, -5));
+  double R0 = basis->Rs_(0);
+  complex<double> ref = v0 * exp(-b*R0*R0);
+  ASSERT_NEAR(real(ref), real(V(0,0)), pow(10.0, -4));
+
+  basis->gausspot(kOpdR, kOp0, b, &V);
+  V *= v0;
+  ref = -2.0*b*R0 *v0* exp(-b*R0*R0);
+  ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -4));
 
   delete basis;
+  /*
+a:    -0.8326517408E+00    -0.0000000000E+00
+b:    -0.8252221444E+00     0.0000000000E+00
+  */
   
 }

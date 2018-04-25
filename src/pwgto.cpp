@@ -223,7 +223,7 @@ namespace qpbranch {
 	    cumsum += cumsum1 * conj(bra->cs_(i)) * ket->cs_(j);
 	  }
 	}
-	res(A,B) = cumsum;
+	res(A,B) = cumsum*eAB_(A,B);
       }
     }    
   }
