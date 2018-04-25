@@ -142,11 +142,11 @@ namespace qpbranch {
     assert(false||"not impl");
     return 0.0;
   }
-  
-  GaussBasis::GaussBasis(const VectorXi& ns, const vector<Operator>& ops):
-    num_(ns.size()), nop_(ops.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_), ops_(ops),
-    Ns_(num_), 
-    gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_), maxn_(num_) {
+
+  /** PlaneWaveGto */
+  PlaneWaveGto::PlaneWaveGto(const VectorXi& ns, const vector<Operator>& ops):
+    num_(ns.size()), nop_(ops.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_),
+    ops_(ops), Ns_(num_), maxn_(num_) {
 
     for(int A = 0; A < num_; A++) {
       for(auto it = ops.begin(); it!=ops.end(); ++it) {
@@ -155,79 +155,10 @@ namespace qpbranch {
 	op_basis_[*it].push_back(ptr);
 	maxn_[A] = maxn_op_basis(*it, ns_(A));
       }
-    }
-    
-    d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
-    for(int A = 0; A < num_; A++) {
-      for(int B = 0; B < num_; B++) {
-	(*d_)[A][B] = new multi_array<complex<double>,3>(extents[maxn_[A]+1][maxn_[B]+1][maxn_[A]+maxn_[B]+1]);
-      }
-    }
+    }       
   }
-  GaussBasis::~GaussBasis() {}
-  void GaussBasis::setup() {
-    setup_normalize();
-    setup_combination();
-    setup_operator();
-  }
-  void GaussBasis::overlap(Operator ibra, Operator iket, MatrixXcd *res) {
-    /* compute overlap matrix. */
-
-    assert(res->rows()>=num_);
-    assert(res->cols()>=num_);
-    
-    for(int A = 0; A < num_; A++) {
-      for(int B = 0; B < num_; B++) {	
-	OpBasis *bra = op_basis_[ibra][A];
-	OpBasis *ket = op_basis_[iket][B];
-	complex<double> cumsum(0);
-
-	for(int i = 0; i < bra->num_; i++) {
-	  for(int j = 0; j < ket->num_; j++) {
-	    cumsum += bra->cs_(i)*ket->cs_(j)*getd(A,B,bra->ns_(i),ket->ns_(j),0);
-	  }
-	}
-	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
-      }
-    }
-  }
-  void GaussBasis::gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *ptr_res) {
-    /* compute matrix element of gauss type potential
-       .   res(A,B) = <gA|V|gB>,
-       where
-       .   V = exp[-bq^2].
-     */
-    
-    MatrixXcd& res(*ptr_res);
-    assert(res.rows()>=num_);
-    assert(res.cols()>=num_);
-    
-    for(int A = 0; A < num_; A++) {
-      for(int B = 0; B < num_; B++) {		
-	OpBasis *bra = op_basis_[ibra][A];
-	OpBasis *ket = op_basis_[iket][B];
-
-	int nA_nB = bra->ns_.maxCoeff() + ket->ns_.maxCoeff();
-
-	VectorXcd intg(nA_nB+1);
-	dwn_gaussint_shift(nA_nB, b, gAB_(A,B), RAB_(A,B), &intg);
-
-	complex<double> cumsum(0);
-	for(int i = 0; i < bra->num_; i++) {
-	  for(int j = 0; j < ket->num_; j++) {
-	    complex<double> cumsum1(0);
-	    int nA(bra->ns_[i]);
-	    int nB(ket->ns_[j]);
-	    for(int N = 0; N <= nA_nB; N++) 
-	      cumsum1 += getd(A,B,nA,nB,N) * intg(N);
-	    cumsum += cumsum1 * conj(bra->cs_(i)) * ket->cs_(j);
-	  }
-	}
-	res(A,B) = cumsum*eAB_(A,B);
-      }
-    }    
-  }
-  void GaussBasis::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+  PlaneWaveGto::~PlaneWaveGto() {}
+  void PlaneWaveGto::at_slow(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     for (int ix = 0; ix < xs.size(); ix++) {
       complex<double> cumsum(0.0);
       complex<double> ii(0.0, 1.0);
@@ -237,8 +168,8 @@ namespace qpbranch {
       }
       (*res)(ix) = cumsum;
     }
-  }
-  void GaussBasis::setup_normalize() {
+  }  
+  void PlaneWaveGto::setup_normalize() {
 
     for(int A = 0; A < num_; A++) {
       int n(ns_[A]);
@@ -247,28 +178,7 @@ namespace qpbranch {
       Ns_[A] = real( 1.0/sqrt((gg[n])) );
     }
   }
-  void GaussBasis::setup_combination() {
-
-    auto ii = complex<double>(0,1);
-    
-    for(int A = 0; A < num_; A++) {
-      for(int B = 0; B < num_; B++) {
-	auto cgA = conj(gs_(A));
-	auto gB = gs_(B);
-	auto RA = Rs_[A]; auto RB = Rs_[B]; auto PA = Ps_[A]; auto PB = Ps_[B];
-	gAB_(A,B) = cgA + gB;
-	RAB_(A,B) = (2.0*cgA*RA + 2.0*gB*RB - ii*PA + ii*PB) / (2.0*gAB_(A,B));
-	eAB_(A,B) = exp(-cgA*RA*RA - gB*RB*RB
-			+ii*RA*PA - ii*PB*RB
-			+gAB_(A,B)*pow(RAB_(A,B), 2));
-	hAB_(A,B) = sqrt(M_PI/gAB_(A,B));
-	
-	hermite_coef_d(gAB_(A,B), RAB_(A,B), Rs_[A], Rs_[B],
-		       maxn_[A], maxn_[B], (*d_)[A][B]);
-      }
-    }    
-  }
-  void GaussBasis::setup_operator() {
+  void PlaneWaveGto::setup_operator() {
     complex<double> ii(0, 1);
     for(int A = 0; A < num_; A++) {
       int nA = ns_[A];
@@ -336,17 +246,146 @@ namespace qpbranch {
       }
     }    
   }
+
+  /** MDR */
+  PlaneWaveGtoMDR::PlaneWaveGtoMDR(const VectorXi& ns, const vector<Operator>& ops):
+    PlaneWaveGto(ns, ops),
+    gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_) {
+
+    d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {
+	(*d_)[A][B] = new multi_array<complex<double>,3>(extents[maxn_[A]+1][maxn_[B]+1][maxn_[A]+maxn_[B]+1]);
+      }
+    }    
+  }
+  PlaneWaveGtoMDR::~PlaneWaveGtoMDR() {}
+  void PlaneWaveGtoMDR::setup() {
+    setup_normalize();
+    setup_operator();
+    setup_combination();
+  }
+  void PlaneWaveGtoMDR::overlap(Operator ibra, Operator iket, MatrixXcd *res) {
+    /* compute overlap matrix. */
+
+    assert(res->rows()>=num_);
+    assert(res->cols()>=num_);
+    assert(op_basis_.find(ibra)!=op_basis_.end());
+    assert(op_basis_.find(iket)!=op_basis_.end());
+    
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {	
+	auto *bra = op_basis_[ibra][A];
+	auto *ket = op_basis_[iket][B];
+	complex<double> cumsum(0);
+	for(int i = 0; i < bra->num_; i++) {
+	  for(int j = 0; j < ket->num_; j++) {
+	    cumsum += conj(bra->cs_(i))*ket->cs_(j)*getd(A,B,bra->ns_(i),ket->ns_(j),0);
+	  }
+	}
+	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
+      }
+    }
+  }
+  void PlaneWaveGtoMDR::gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *ptr_res) {
+    /* compute matrix element of gauss type potential
+       .   res(A,B) = <gA|V|gB>,
+       where
+       .   V = exp[-bq^2].
+     */
+    
+    MatrixXcd& res(*ptr_res);
+    assert(res.rows()>=num_);
+    assert(res.cols()>=num_);
+    
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {		
+	OpBasis *bra = op_basis_[ibra][A];
+	OpBasis *ket = op_basis_[iket][B];
+
+	int nA_nB = bra->ns_.maxCoeff() + ket->ns_.maxCoeff();
+
+	VectorXcd intg(nA_nB+1);
+	dwn_gaussint_shift(nA_nB, b, gAB_(A,B), RAB_(A,B), &intg);
+
+	complex<double> cumsum(0);
+	for(int i = 0; i < bra->num_; i++) {
+	  for(int j = 0; j < ket->num_; j++) {
+	    complex<double> cumsum1(0);
+	    int nA(bra->ns_[i]);
+	    int nB(ket->ns_[j]);
+	    for(int N = 0; N <= nA_nB; N++) 
+	      cumsum1 += getd(A,B,nA,nB,N) * intg(N);
+	    cumsum += cumsum1 * conj(bra->cs_(i)) * ket->cs_(j);
+	  }
+	}
+	res(A,B) = cumsum*eAB_(A,B);
+      }
+    }    
+  }
+  void PlaneWaveGtoMDR::at(Operator iop, const VectorXcd& cs, const VectorXd& xs,
+			   VectorXcd *res) {
+    PlaneWaveGto::at_slow(iop, cs, xs, res);
+  }
+  void PlaneWaveGtoMDR::setup_combination() {
+
+    auto ii = complex<double>(0,1);
+    
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {
+	auto cgA = conj(gs_(A));
+	auto gB = gs_(B);
+	auto RA = Rs_[A]; auto RB = Rs_[B]; auto PA = Ps_[A]; auto PB = Ps_[B];
+	gAB_(A,B) = cgA + gB;
+	RAB_(A,B) = (2.0*cgA*RA + 2.0*gB*RB - ii*PA + ii*PB) / (2.0*gAB_(A,B));
+	eAB_(A,B) = exp(-cgA*RA*RA - gB*RB*RB
+			+ii*RA*PA - ii*PB*RB
+			+gAB_(A,B)*pow(RAB_(A,B), 2));
+	hAB_(A,B) = sqrt(M_PI/gAB_(A,B));
+	
+	hermite_coef_d(gAB_(A,B), RAB_(A,B), Rs_[A], Rs_[B],
+		       maxn_[A], maxn_[B], (*d_)[A][B]);
+      }
+    }    
+  }
+
+  /** same */
+  PlaneWaveGto1Center::PlaneWaveGto1Center(const VectorXi& ns, const vector<Operator>& ops) :
+    PlaneWaveGto(ns, ops) {
+    maxmaxn_ = maxn_.maxCoeff();
+    ints_ = VectorXcd::Zero(maxmaxn_+1);
+  }
+  PlaneWaveGto1Center::~PlaneWaveGto1Center() {}
+  void PlaneWaveGto1Center::setup() {
+    setup_normalize();
+    setup_operator();    
+    gtoint2n(maxmaxn_, conj(gs_(0))+gs_(0), &ints_);
+  }
+  void PlaneWaveGto1Center::overlap(Operator ibra, Operator iket, MatrixXcd *res){
+
+    assert(res->rows()>=num_);
+    assert(res->cols()>=num_);
+    assert(op_basis_.find(ibra)!=op_basis_.end());
+    assert(op_basis_.find(iket)!=op_basis_.end());
+
+    for(int A = 0; A < num_; A++) {
+      for(int B = 0; B < num_; B++) {	
+	auto *bra = op_basis_[ibra][A];
+	auto *ket = op_basis_[iket][B];
+	complex<double> cumsum(0);
+	for(int i = 0; i < bra->num_; i++) {
+	  for(int j = 0; j < ket->num_; j++) {
+	    cumsum += conj(bra->cs_(i))*ket->cs_(j)*ints_(bra->ns_(i)+ket->ns_(j));
+	  }
+	}
+	(*res)(A,B) = cumsum;
+      }
+    }    
+    
+  }
+  void PlaneWaveGto1Center::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+    at_slow(iop, cs, xs, res);
+  }
   
-  PlaneWaveGTO::PlaneWaveGTO(const VectorXi& ns, const vector<Operator>& ops):
-    GaussBasis(ns, ops) {}
-  PlaneWaveGTO::~PlaneWaveGTO() {
-  }
-  void PlaneWaveGTO::setup() { GaussBasis::setup(); }
-  void PlaneWaveGTO::overlap(Operator ibra, Operator iket, MatrixXcd *res) {
-    GaussBasis::overlap(ibra, iket, res);
-  }
-  void PlaneWaveGTO::at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
-    GaussBasis::at(iop, cs, xs, res);
-  }
 }
 

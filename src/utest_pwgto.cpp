@@ -32,7 +32,7 @@ TEST(utest_pwgto, overlap) {
   int num = 4;
   VectorXi ns(num); ns << 0, 0, 2, 2;
   vector<Operator> ops; ops.push_back(kOp0);
-  PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
+  auto *basis = new PlaneWaveGtoMDR(ns, ops);
   basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
   basis->Rs_ << 0.0, 0.0, 0.2, 0.2;
   basis->Ps_ << 1.0, 0.0, 0.5, 0.5;
@@ -66,12 +66,12 @@ TEST(utest_pwgto, multipole0) {
   int num = 5;
   vector<Operator> ops = {kOp0, kOp1, kOp2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
-  PlaneWaveGTO *pw_basis = new PlaneWaveGTO(ns, ops);
+  auto *pw_basis = new PlaneWaveGtoMDR(ns, ops);
   pw_basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
   pw_basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
   pw_basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
   
-  GaussBasis *basis = pw_basis;
+  auto *basis = pw_basis;
   basis->setup();
 
   MatrixXcd S(num, num);
@@ -124,7 +124,7 @@ TEST(utest_pwgto, test_harmonic) {
 
   VectorXi ns(num); ns << 0, 1, 2, 3;
   vector<Operator> ops = {kOp0, kOp2, kOpP2};
-  PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
+  auto *basis = new PlaneWaveGtoMDR(ns, ops);
 
   complex<double> g = m*w/2;
   basis->gs_ = VectorXcd::Ones(num)*g;
@@ -160,7 +160,7 @@ TEST(utest_pwgto, test_gausspot) {
   int num = 1;
   VectorXi ns(num); ns << 0;
   vector<Operator> ops = {kOp0, kOpdR};
-  PlaneWaveGTO *basis = new PlaneWaveGTO(ns, ops);
+  auto *basis = new PlaneWaveGtoMDR(ns, ops);
   basis->gs_ << 100.0;
   basis->Rs_ << 0.3;
   basis->setup();

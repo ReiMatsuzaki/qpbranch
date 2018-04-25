@@ -53,9 +53,8 @@ namespace qpbranch {
     OpBasis(int num);
   };
  
-  class GaussBasis {
-  public:
-    GaussBasis(const VectorXi& ns, const vector<Operator>& ops);
+  class PlaneWaveGto {
+  public:    
     // - data size -
     int num_, nop_;
     // - variable -
@@ -63,32 +62,54 @@ namespace qpbranch {
     VectorXcd gs_;
     VectorXd Rs_, Ps_;
     vector<Operator> ops_;
-    // - operatorator -
+    // - intermediate -
     map<Operator, vector<OpBasis*> > op_basis_;
     VectorXd Ns_;
-    MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     VectorXi maxn_;
-    //    multi_array<complex<double>,5> *d_; // d(A,B,nA,nB,N)
+    // - method -
+    PlaneWaveGto(const VectorXi& ns, const vector<Operator>& ops);
+    virtual ~PlaneWaveGto();
+    virtual void setup() = 0;
+    virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res) = 0;
+    virtual void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res) = 0;
+    virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) = 0;
+  protected:
+    void at_slow(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);    
+    void setup_normalize();
+    void setup_operator();
+  };
+
+  /**
+     Plane Wave Gauss Type Orbitals by the McMurchie-Davidson Recursion formula.
+   */
+  class PlaneWaveGtoMDR : public PlaneWaveGto {
+  public:
+    // - intermediate -
+    MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     multi_array<multi_array<complex<double>,3>*,2> *d_;
-    virtual ~GaussBasis();
-    virtual void setup();
-    virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res);
-    virtual void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res);
-    virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    // - method -
+    PlaneWaveGtoMDR(const VectorXi& ns, const vector<Operator>& ops);
+    ~PlaneWaveGtoMDR();
+    void setup();
+    void overlap(Operator ibra, Operator iket, MatrixXcd *res);
+    void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res);
+    void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
   protected:
-    void setup_normalize();
-    void setup_combination();
-    void setup_operator();
-    
+    void setup_combination();    
   };
-  
-  class PlaneWaveGTO : public GaussBasis {
-  public:    
-    PlaneWaveGTO(const VectorXi& ns, const vector<Operator>& ops);
-    ~PlaneWaveGTO();
+
+  /**
+     all gauss parameters are same
+   */
+  class PlaneWaveGto1Center : public PlaneWaveGto {
+  public:
+    int maxmaxn_;
+    VectorXcd ints_; // ints_[n] : Int[q^n Exp[-2Re[g]q^2]]
+    PlaneWaveGto1Center(const VectorXi& ns, const vector<Operator>& ops);
+    ~PlaneWaveGto1Center();
     void setup();
     void overlap(Operator ibra, Operator iket, MatrixXcd *res);
     void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
