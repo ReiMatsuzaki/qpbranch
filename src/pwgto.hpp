@@ -83,10 +83,11 @@ namespace qpbranch {
      Plane Wave Gauss Type Orbitals by the McMurchie-Davidson Recursion formula.
    */
   class PlaneWaveGtoMDR : public PlaneWaveGto {
-  public:
+  private:
     // - intermediate -
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     multi_array<multi_array<complex<double>,3>*,2> *d_;
+  public:
     // - method -
     PlaneWaveGtoMDR(const VectorXi& ns, const vector<Operator>& ops);
     ~PlaneWaveGtoMDR();
