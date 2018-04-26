@@ -2,22 +2,19 @@
 #include "pwgto.hpp"
 namespace qpbranch {
   void OperatorId::call_new(PlaneWaveGto *basis) { basis->new_op(this); }
-  void OperatorId::call_setup(PlaneWaveGto *basis) { basis->setup_op(this); }
   
   OperatorRn::OperatorRn(int n) : n_(n) {}
   void OperatorRn::call_new(PlaneWaveGto *basis) { basis->new_op(this); }
-  void OperatorRn::call_setup(PlaneWaveGto *basis) { basis->setup_op(this); }
   
   OperatorPn::OperatorPn(int n) : n_(n) {}
   void OperatorPn::call_new(PlaneWaveGto *basis) { basis->new_op(this); }
-  void OperatorPn::call_setup(PlaneWaveGto *basis) { basis->setup_op(this); }
 
-  /*
-  PlaneWaveGto::PlaneWaveGto(const VectorXi& ns, vector<Operator*> ops) {}
-  void PlaneWaveGto::new_op(OperatorRn *op) {}
-  void PlaneWaveGto::new_op(OperatorPn *op) {}
-  void PlaneWaveGto::setup_op(OperatorRn *op) {}
-  void PlaneWaveGto::setup_op(OperatorPn *op) {}
-  */
+  OperatorDa::OperatorDa(int id) : id_(id) {}
+  void OperatorDa::call_new(PlaneWaveGto *basis) { basis->new_op(this); }
+  
+  OperatorGausspot::OperatorGausspot(complex<double> v0, complex<double> b, complex<double> q0):
+    v0_(v0), b_(b), q0_(q0) {}
+  void OperatorGausspot::call_new(PlaneWaveGto *basis) { basis->new_op(this); }
+  
 
 }

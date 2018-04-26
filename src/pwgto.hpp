@@ -23,41 +23,71 @@ namespace qpbranch {
   complex<double> hermite_coef_d_0(complex<double> gP, complex<double> wP, double RA, double RB,
 				   int nA, int nB, int Nk);
 
-  /*
-  class PlaneWaveGtoData {
+  // id used in derivative of PWGTO variables.
+  const int kIdDR = 1;
+  const int kIdDP = 2;
+  const int kIdDgr = 3;
+  const int kIdDgi = 4;
+
+  class PlaneWaveGto;
+  class PwgtoBufferBasic;
+  class PwgtoBufferGausspot;
+
+  // Buffer for each operator applying PlaneWaveGto.
+  class PwgtoBuffer {
+  public:
+    virtual int maxn(int A) = 0;
+    virtual void call_setup(PlaneWaveGto *basis) = 0;
+    virtual void matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+  };
+  // Buffer for basic case. op.phi_A can be represented by polynomial times gauss function
+  //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA))
+  class PwgtoBufferBasic : public PwgtoBuffer {
   public:
     int num_;
-    VectorXi ns_;
-    VectorXcd gs_;
-    VectorXd Rs_, Ps_;
-    PlaneWaveGtoData(int num);
-    ~PlaneWaveGtoData();
+    vector<vector<pair<int,complex<double> > > > ncs_; // ncs_[A][i]
+    int maxn(int A);
+    virtual void call_setup(PlaneWaveGto *basis) = 0;
+    void matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
   };
-
-  class OpPwgto {
-  protected:
-    Operator *op_;
-    PlaneWaveGtoData *pwgto_;
+  class PwgtoBufferId : public PwgtoBufferBasic {
   public:
-    OpPwgto(Operator *op, PlaneWaveGtoData *pwgto_);
+    void call_setup(PlaneWaveGto *basis);
   };
-  class OpPwgtoBasic : public OpPwgto {
-    vector<pair<int, complex<double>>> ncs_;
+  class PwgtoBufferRn : public PwgtoBufferBasic {
+  public:
+    OperatorRn *op_;
+    PwgtoBufferRn(OperatorRn *op);
+    void call_setup(PlaneWaveGto *basis);
+  };
+  class PwgtoBufferPn : public PwgtoBufferBasic {
+  public:
+    OperatorPn *op_;
+    PwgtoBufferPn(OperatorPn *op);
+    void call_setup(PlaneWaveGto *basis);
+  };
+  class PwgtoBufferDa : public PwgtoBufferBasic {
+  public:
+    OperatorDa *op_;
+    PwgtoBufferDa(OperatorDa *op);
+    void call_setup(PlaneWaveGto *basis);
+  };
+  class PwgtoBufferGausspot : public PwgtoBuffer {
+  public:
+    OperatorGausspot *op_;
+    VectorXi ns_;
+    PwgtoBufferGausspot(OperatorGausspot *op, const VectorXi& ns);
+    int maxn(int A);
+    void call_setup(PlaneWaveGto *basis);
+    void matrix(PwgtoBuffer *opbrat, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
   };
   
-  enum Operator {
-    kNone, kOp0, kOp1, kOp2, kOpP1, kOpP2, kOpdR, kOpdP, kOpdgr, kOpdgi
-  };
-  */
-
-  class OpBasis {
-  public:
-    int num_;    
-    VectorXcd cs_;
-    VectorXi  ns_;
-    OpBasis(int num);
-  };
- 
   class PlaneWaveGto {
   public:    
     // - data size -
@@ -68,7 +98,7 @@ namespace qpbranch {
     VectorXd Rs_, Ps_;
     vector<Operator*> ops_;
     // - intermediate -
-    map<Operator*, vector<OpBasis*> > op_basis_;
+    map<Operator*, PwgtoBuffer*> buffer_map_;
     VectorXd Ns_;
     VectorXi maxn_;
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
@@ -83,9 +113,15 @@ namespace qpbranch {
     void new_op(OperatorId *op);
     void new_op(OperatorRn *op);
     void new_op(OperatorPn *op);
-    void setup_op(OperatorId *op);
-    void setup_op(OperatorRn *op);
-    void setup_op(OperatorPn *op);
+    void new_op(OperatorDa *op);
+    void new_op(OperatorGausspot *op);
+    void setup_op(PwgtoBufferId *op);
+    void setup_op(PwgtoBufferRn *op);
+    void setup_op(PwgtoBufferPn *op);
+    void setup_op(PwgtoBufferDa *op);
+    void setup_op(PwgtoBufferGausspot *op);
+    void calc_matrix(PwgtoBufferBasic *ibra, PwgtoBufferBasic *iket, MatrixXcd *res);
+    void calc_matrix(PwgtoBufferBasic *ibra, PwgtoBufferGausspot *iket, MatrixXcd *res);
   protected:
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];

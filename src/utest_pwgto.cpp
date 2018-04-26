@@ -32,12 +32,12 @@ TEST(utest_pwgto, overlap) {
 
   int num = 4;
   VectorXi ns(num); ns << 0, 0, 2, 2;
-  Operator *op_id = new OperatorId();
-  vector<Operator*> ops; ops.push_back(op_id);
+  auto *op_id = new OperatorId();
+  vector<Operator*> ops = {op_id};
   auto *basis = new PlaneWaveGto(ns, ops);
   basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
   basis->Rs_ << 0.0, 0.0, 0.2, 0.2;
-  basis->Ps_ << 1.0, 0.0, 0.5, 0.5;
+  basis->Ps_ << 0.0, 0.0, 0.5, 0.5;
   basis->setup();
 
   MatrixXcd S(num, num);
@@ -61,40 +61,42 @@ TEST(utest_pwgto, overlap) {
   VectorXcd gg(9+1);
   gtoint2n(9, conj(basis->gs_(A))+basis->gs_(B), &gg);
   auto ref = gg((basis->ns_(A) + basis->ns_(B))/2);
+
   ASSERT_DOUBLE_EQ(real(ref), real(calc)) << "A:" << A << endl << "B:" << B << endl;
   ASSERT_DOUBLE_EQ(imag(ref), imag(calc)) << "A:" << A << endl << "B:" << B << endl;
   
 }
-TEST(utest_pwgto, multipole0) {
-  /*
+TEST(utest_pwgto, multipole) {
+
   int num = 5;
-  vector<Operator> ops = {kOp0, kOp1, kOp2};
+  auto id = new OperatorId();
+  auto R1 = new OperatorRn(1);
+  auto R2 = new OperatorRn(2);
+  vector<Operator*> ops = {id, R1, R2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
-  auto *pw_basis = new PlaneWaveGtoMDR(ns, ops);
-  pw_basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
-  pw_basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
-  pw_basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
-  
-  auto *basis = pw_basis;
+  auto *basis = new PlaneWaveGto(ns, ops);
+  basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
+  basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
+  basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
   basis->setup();
 
   MatrixXcd S(num, num);
-  basis->overlap(kOp0, kOp0, &S);
+  basis->matrix(id, id, &S);
   
   MatrixXcd M01(num, num);
-  basis->overlap(kOp0, kOp1, &M01);
+  basis->matrix(id, R1, &M01);
 
   MatrixXcd M10(num, num);
-  basis->overlap(kOp1, kOp0, &M10);
+  basis->matrix(R1, id, &M10);
 
   MatrixXcd M02(num, num);
-  basis->overlap(kOp0, kOp2, &M02);
+  basis->matrix(id, R2, &M02);
 
   MatrixXcd M11(num, num);
-  basis->overlap(kOp1, kOp1, &M11);
+  basis->matrix(R1, R1, &M11);
 
   MatrixXcd M20(num, num);
-  basis->overlap(kOp2, kOp0, &M20);
+  basis->matrix(R2, id, &M20);
   
   for(int A = 0; A < num; A++) {
     auto g = conj(basis->gs_(A)) + basis->gs_(A);
@@ -118,12 +120,10 @@ TEST(utest_pwgto, multipole0) {
   ASSERT_DOUBLE_EQ(imag(M20(A,B)), imag(M11(A,B))) << "A:"<<A<<endl<<"B:"<<B<<endl;
 
   delete basis;
-  */
   
 }
 TEST(utest_pwgto, test_harmonic) {
 
-  /*
   int num = 4;
   double x0 = 0.3d;
   double k = 0.39;
@@ -131,8 +131,11 @@ TEST(utest_pwgto, test_harmonic) {
   double w = sqrt(k/m);
 
   VectorXi ns(num); ns << 0, 1, 2, 3;
-  vector<Operator> ops = {kOp0, kOp2, kOpP2};
-  auto *basis = new PlaneWaveGtoMDR(ns, ops);
+  auto opid = new OperatorId();
+  auto opR2 = new OperatorRn(2);
+  auto opP2 = new OperatorPn(2);
+  vector<Operator*> ops = {opid, opR2, opP2};
+  auto *basis = new PlaneWaveGto(ns, ops);
 
   complex<double> g = m*w/2;
   basis->gs_ = VectorXcd::Ones(num)*g;
@@ -141,10 +144,9 @@ TEST(utest_pwgto, test_harmonic) {
   basis->setup();
 
   MatrixXcd P2(num,num), R2(num,num), H(num,num), S(num,num);
-
-  basis->overlap(kOp0, kOp0,  &S);
-  basis->overlap(kOp0, kOp2,  &R2);
-  basis->overlap(kOp0, kOpP2, &P2);
+  basis->matrix(opid, opid, &S);
+  basis->matrix(opid, opR2, &R2);
+  basis->matrix(opid, opP2, &P2);
   H = P2/(2*m) + k/2*R2;
 
   VectorXd eigs;
@@ -158,41 +160,43 @@ TEST(utest_pwgto, test_harmonic) {
   for(int n = 0; n < num-1; n++) {
     ASSERT_DOUBLE_EQ(w*(n+0.5), eigs(n)) << "n: " << n;
     VectorXcd ys(nx);
-    basis->at(kOp0, U.col(n), xs, &ys);
+    basis->at(opid, U.col(n), xs, &ys);
   }
   
   delete basis;  
-  */
   
 }
 TEST(utest_pwgto, test_gausspot) {
 
-  /*
   int num = 1;
+  complex<double> b(1.3);
+  complex<double> v0(1.2);
+  complex<double> q0(0.0);
+  
   VectorXi ns(num); ns << 0;
-  vector<Operator> ops = {kOp0, kOpdR};
-  auto *basis = new PlaneWaveGtoMDR(ns, ops);
+  auto opid = new OperatorId();
+  auto opdR = new OperatorDa(kIdDR);
+  auto opV  = new OperatorGausspot(v0, b, q0);
+  vector<Operator*> ops = {opid, opdR, opV};
+  auto *basis = new PlaneWaveGto(ns, ops);
   basis->gs_ << 100.0;
   basis->Rs_ << 0.3;
   basis->setup();
-
-  complex<double> b(1.3);
-  complex<double> v0(1.2);
+  
   MatrixXcd V(num,num);
-  basis->gausspot(kOp0, kOp0, b, &V);
-  V *= v0;
+  basis->matrix(opid, opV, &V);
   double R0 = basis->Rs_(0);
   complex<double> ref = v0 * exp(-b*R0*R0);
-  ASSERT_NEAR(real(ref), real(V(0,0)), pow(10.0, -4));
+  ASSERT_NEAR(real(ref), real(V(0,0)), 3.0*pow(10.0, -3));
 
-  basis->gausspot(kOpdR, kOp0, b, &V);
-  V *= v0;
+  basis->matrix(opdR, opV, &V);
   ref = -2.0*b*R0 *v0* exp(-b*R0*R0);
+  //ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -4));  
+  // from gwpdy/src/utest_pwgto2.f90
+  ref = -0.8252221444;
   ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -4));
 
   delete basis;
-  */
-
   
   /*
 a:    -0.8326517408E+00    -0.0000000000E+00
