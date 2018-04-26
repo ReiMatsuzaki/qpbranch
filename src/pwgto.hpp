@@ -7,6 +7,8 @@
 #include <map>
 #include <boost/multi_array.hpp>
 
+#include "operator.hpp"
+
 namespace qpbranch {
   using namespace std;
   using namespace Eigen;
@@ -21,30 +23,33 @@ namespace qpbranch {
   complex<double> hermite_coef_d_0(complex<double> gP, complex<double> wP, double RA, double RB,
 				   int nA, int nB, int Nk);
 
-    /*
-  class OperatorForGauss {
+  /*
+  class PlaneWaveGtoData {
   public:
-
-    static Operator* Op0();
-    static Operator* Op1();
-    static Operator* Op2();
-    static Operator* OpP1();
-    static Operator* OpP2();
-    static Operator* OpdR();
-    static Operator* OpdP();
-    static Operator* Opdgr();
-    static Operator* Opdgr();
-
-    virtual int num_poly(int n);
-    virtual int maxn(int n);
-    virtual void calc_
+    int num_;
+    VectorXi ns_;
+    VectorXcd gs_;
+    VectorXd Rs_, Ps_;
+    PlaneWaveGtoData(int num);
+    ~PlaneWaveGtoData();
   };
-    */
+
+  class OpPwgto {
+  protected:
+    Operator *op_;
+    PlaneWaveGtoData *pwgto_;
+  public:
+    OpPwgto(Operator *op, PlaneWaveGtoData *pwgto_);
+  };
+  class OpPwgtoBasic : public OpPwgto {
+    vector<pair<int, complex<double>>> ncs_;
+  };
   
   enum Operator {
     kNone, kOp0, kOp1, kOp2, kOpP1, kOpP2, kOpdR, kOpdP, kOpdgr, kOpdgi
   };
-  
+  */
+
   class OpBasis {
   public:
     int num_;    
@@ -61,32 +66,41 @@ namespace qpbranch {
     VectorXi ns_;
     VectorXcd gs_;
     VectorXd Rs_, Ps_;
-    vector<Operator> ops_;
+    vector<Operator*> ops_;
     // - intermediate -
-    map<Operator, vector<OpBasis*> > op_basis_;
+    map<Operator*, vector<OpBasis*> > op_basis_;
     VectorXd Ns_;
     VectorXi maxn_;
+    MatrixXcd gAB_, eAB_, hAB_,  RAB_;
+    multi_array<multi_array<complex<double>,3>*,2> *d_;
     // - method -
-    PlaneWaveGto(const VectorXi& ns, const vector<Operator>& ops);
+    PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops);
     virtual ~PlaneWaveGto();
-    virtual void setup() = 0;
-    virtual void overlap(Operator ibra, Operator iket, MatrixXcd *res) = 0;
-    virtual void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res) = 0;
-    virtual void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) = 0;
+    void setup();
+    void matrix(Operator *ibra, Operator *iket, MatrixXcd *res);
+    void at(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    // - operator specific operation -
+    void new_op(OperatorId *op);
+    void new_op(OperatorRn *op);
+    void new_op(OperatorPn *op);
+    void setup_op(OperatorId *op);
+    void setup_op(OperatorRn *op);
+    void setup_op(OperatorPn *op);
   protected:
-    void at_slow(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);    
-    void setup_normalize();
-    void setup_operator();
+    inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
+      return (*(*d_)[A][B])[na][nb][Nk];
+    }
   };
 
+
+  
   /**
      Plane Wave Gauss Type Orbitals by the McMurchie-Davidson Recursion formula.
-   */
+
   class PlaneWaveGtoMDR : public PlaneWaveGto {
   private:
     // - intermediate -
-    MatrixXcd gAB_, eAB_, hAB_,  RAB_;
-    multi_array<multi_array<complex<double>,3>*,2> *d_;
+    
   public:
     // - method -
     PlaneWaveGtoMDR(const VectorXi& ns, const vector<Operator>& ops);
@@ -98,13 +112,13 @@ namespace qpbranch {
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
-  protected:
-    void setup_combination();    
+  protected:    
   };
-
+  */
+  
   /**
      all gauss parameters are same
-   */
+
   class PlaneWaveGto1Center : public PlaneWaveGto {
   public:
     int maxmaxn_;
@@ -115,6 +129,7 @@ namespace qpbranch {
     void overlap(Operator ibra, Operator iket, MatrixXcd *res);
     void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
+   */
 
 }
 
