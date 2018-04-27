@@ -3,6 +3,8 @@
 #include <Eigen/Core>
 namespace qpbranch {
   using Eigen::VectorXd;
+  using Eigen::MatrixXd;
+  using Eigen::VectorXcd;
   using Eigen::MatrixXcd;
   void zhegv(const MatrixXcd& H, const MatrixXcd& S, MatrixXcd *U, VectorXd *w);
   void zgesv(const MatrixXcd& M, const VectorXcd& b, VectorXcd *v);

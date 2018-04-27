@@ -1,24 +1,20 @@
 include ../local.mk
 include ../conf.mk
 
-GTEST=${EXTERNAL}/googletest/googletest
-LIBS += -lgtest -lgtest_main -lpthread
-LDFLAGS += -L${GTEST}
-INCLUDE += -I${GTEST}/include
+UTEST=pwgto
 
-CXXFLAGS=-O0 -d -Wall -Wextra
+${BUILD}/utest_math.x:  $(addprefix mathplus.o utest_math.o)
+${BUILD}/utest_pwgto.x: $(addprefix ${BUILD}/, libgtest_main.a mathplus.o eigenplus.o operator.o pwgto.o utest_pwgto.o)
+${BUILD}/utest_dy_branch.x: $(addprefix ${BUILD}/, mathplus.o eigenplus.o operator.o pwgto.o dy_branch.o utest_dy_branch.o)
 
-${BUILD}/utest_math.x:  ${BUILD}/mathplus.o  ${BUILD}/utest_math.o
-${BUILD}/utest_pwgto.x: ${BUILD}/mathplus.o ${BUILD}/eigenplus.o ${BUILD}/operator.o ${BUILD}/pwgto.o ${BUILD}/utest_pwgto.o
-${BUILD}/utest_dy_branch.x: ${BUILD}/mathplus.o ${BUILD}/eigenplus.o ${BUILD}/operator.o ${BUILD}/pwgto.o ${BUILD}/dy_branch.o ${BUILD}/utest_dy_branch.o
 
-.PHONY: check clean
-check_%: ${BUILD}/utest_%.x
+
+.PHONY: all check
+
+check: ${BUILD}/utest_${UTEST}.x
 	$<
-#check_math: ${BUILD}/utest_math.x 
-#	$<
-#check_pwgto:${BUILD}/utest_pwgto.x
-#	$<
+
+all: check
 
 clean: clean_all
 

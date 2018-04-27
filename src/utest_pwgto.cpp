@@ -32,7 +32,9 @@ TEST(utest_pwgto, overlap) {
 
   int num = 4;
   VectorXi ns(num); ns << 0, 0, 2, 2;
-  auto *op_id = new OperatorId();
+  OperatorId opop_id;
+  Operator *op_id = &opop_id;
+  
   vector<Operator*> ops = {op_id};
   auto *basis = new PlaneWaveGto(ns, ops);
   basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
@@ -133,7 +135,7 @@ TEST(utest_pwgto, test_harmonic) {
   VectorXi ns(num); ns << 0, 1, 2, 3;
   auto opid = new OperatorId();
   auto opR2 = new OperatorRn(2);
-  auto opP2 = new OperatorPn(2);
+  auto opP2 = new OperatorPn(2);  
   vector<Operator*> ops = {opid, opR2, opP2};
   auto *basis = new PlaneWaveGto(ns, ops);
 

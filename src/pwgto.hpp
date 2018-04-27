@@ -30,143 +30,103 @@ namespace qpbranch {
   const int kIdDgi = 4;
 
   class PlaneWaveGto;
-  class PwgtoBufferBasic;
-  class PwgtoBufferGausspot;
+  class OpBufBasic;
+  class OpBufGausspot;
 
   // Buffer for each operator applying PlaneWaveGto.
-  class PwgtoBuffer {
+  class OpBuf {
   public:
     virtual int maxn(int A) = 0;
-    virtual void call_setup(PlaneWaveGto *basis) = 0;
-    virtual void matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void setup(PlaneWaveGto *basis) = 0;
+    virtual void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
   };
   // Buffer for basic case. op.phi_A can be represented by polynomial times gauss function
   //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA))
-  class PwgtoBufferBasic : public PwgtoBuffer {
+  class OpBufBasic : public OpBuf {
   public:
     int num_;
-    vector<vector<pair<int,complex<double> > > > ncs_; // ncs_[A][i]
+    vector<int> nums_;
+    vector<VectorXi> ns_;   // ns_[A][i]
+    vector<VectorXcd> cs_;  // cs_[A][i]
+    /*    vector<vector<pair<int,complex<double> > > > ncs_; // ncs_[A][i] */
+    OpBufBasic(int num);
     int maxn(int A);
-    virtual void call_setup(PlaneWaveGto *basis) = 0;
-    void matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    virtual void setup(PlaneWaveGto *basis) = 0;    
+    void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void init_zero(int A, int num);
   };
-  class PwgtoBufferId : public PwgtoBufferBasic {
+  class OpBufId : public OpBufBasic {
   public:
-    void call_setup(PlaneWaveGto *basis);
+    OpBufId(int num);
+    void setup(PlaneWaveGto *basis);
   };
-  class PwgtoBufferRn : public PwgtoBufferBasic {
+  class OpBufRn : public OpBufBasic {
   public:
-    OperatorRn *op_;
-    PwgtoBufferRn(OperatorRn *op);
-    void call_setup(PlaneWaveGto *basis);
+    int n_;
+    OpBufRn(int num, int n);
+    void setup(PlaneWaveGto *basis);
   };
-  class PwgtoBufferPn : public PwgtoBufferBasic {
+  class OpBufPn : public OpBufBasic {
   public:
-    OperatorPn *op_;
-    PwgtoBufferPn(OperatorPn *op);
-    void call_setup(PlaneWaveGto *basis);
+    int n_;
+    OpBufPn(const VectorXi& ns, int n);
+    void setup(PlaneWaveGto *basis);
   };
-  class PwgtoBufferDa : public PwgtoBufferBasic {
+  class OpBufDa : public OpBufBasic {
   public:
-    OperatorDa *op_;
-    PwgtoBufferDa(OperatorDa *op);
-    void call_setup(PlaneWaveGto *basis);
+    int id_;
+    OpBufDa(const VectorXi& ns, int id);
+    void setup(PlaneWaveGto *basis);
   };
-  class PwgtoBufferGausspot : public PwgtoBuffer {
+  class OpBufGausspot : public OpBuf {
   public:
-    OperatorGausspot *op_;
     VectorXi ns_;
-    PwgtoBufferGausspot(OperatorGausspot *op, const VectorXi& ns);
+    OperatorGausspot *op_;    
+    OpBufGausspot(const VectorXi& ns, OperatorGausspot *op);
+    
     int maxn(int A);
-    void call_setup(PlaneWaveGto *basis);
-    void matrix(PwgtoBuffer *opbrat, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void setup(PlaneWaveGto *basis);
+    void matrix(OpBuf *opbrat, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
   };
+
+  OpBuf* make_op_buff(PlaneWaveGto *basis, Operator *op);
   
   class PlaneWaveGto {
   public:    
-    // - data size -
+    // data size
     int num_, nop_;
-    // - variable -
+    // variable
     VectorXi ns_;
     VectorXcd gs_;
     VectorXd Rs_, Ps_;
     vector<Operator*> ops_;
-    // - intermediate -
-    map<Operator*, PwgtoBuffer*> buffer_map_;
+    // intermediate
+    map<Operator*, OpBuf*> buffer_map_;
     VectorXd Ns_;
     VectorXi maxn_;
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     multi_array<multi_array<complex<double>,3>*,2> *d_;
-    // - method -
+    // Main
     PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops);
     virtual ~PlaneWaveGto();
     void setup();
     void matrix(Operator *ibra, Operator *iket, MatrixXcd *res);
     void at(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-    // - operator specific operation -
-    void new_op(OperatorId *op);
-    void new_op(OperatorRn *op);
-    void new_op(OperatorPn *op);
-    void new_op(OperatorDa *op);
-    void new_op(OperatorGausspot *op);
-    void setup_op(PwgtoBufferId *op);
-    void setup_op(PwgtoBufferRn *op);
-    void setup_op(PwgtoBufferPn *op);
-    void setup_op(PwgtoBufferDa *op);
-    void setup_op(PwgtoBufferGausspot *op);
-    void calc_matrix(PwgtoBufferBasic *ibra, PwgtoBufferBasic *iket, MatrixXcd *res);
-    void calc_matrix(PwgtoBufferBasic *ibra, PwgtoBufferGausspot *iket, MatrixXcd *res);
+    // Calculation
+    void calc_matrix(OpBufBasic *ibra, OpBufBasic *iket, MatrixXcd *res);
+    void calc_matrix(OpBufBasic *ibra, OpBufGausspot *iket, MatrixXcd *res);
   protected:
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
   };
-
-
   
-  /**
-     Plane Wave Gauss Type Orbitals by the McMurchie-Davidson Recursion formula.
-
-  class PlaneWaveGtoMDR : public PlaneWaveGto {
-  private:
-    // - intermediate -
-    
-  public:
-    // - method -
-    PlaneWaveGtoMDR(const VectorXi& ns, const vector<Operator>& ops);
-    ~PlaneWaveGtoMDR();
-    void setup();
-    void overlap(Operator ibra, Operator iket, MatrixXcd *res);
-    void gausspot(Operator ibra, Operator iket, complex<double> b, MatrixXcd *res);
-    void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-    inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
-      return (*(*d_)[A][B])[na][nb][Nk];
-    }
-  protected:    
-  };
-  */
-  
-  /**
-     all gauss parameters are same
-
-  class PlaneWaveGto1Center : public PlaneWaveGto {
-  public:
-    int maxmaxn_;
-    VectorXcd ints_; // ints_[n] : Int[q^n Exp[-2Re[g]q^2]]
-    PlaneWaveGto1Center(const VectorXi& ns, const vector<Operator>& ops);
-    ~PlaneWaveGto1Center();
-    void setup();
-    void overlap(Operator ibra, Operator iket, MatrixXcd *res);
-    void at(Operator iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-  };
-   */
-
 }
 
 #endif  // FOO_BAR_BAZ_H_

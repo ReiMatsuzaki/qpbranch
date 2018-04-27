@@ -11,41 +11,38 @@ namespace qpbranch {
   
   class Operator {
   public:
-    //    Operator();
-    //    virtual ~Operator();
-    virtual void call_new(PlaneWaveGto *ptr) =0;
+    virtual std::string str() const = 0;
   };
   class OperatorId : public Operator {
   public:
-    OperatorId() {}
-    ~OperatorId() {}
-    void call_new(PlaneWaveGto *ptr);
+    std::string str() const { return "id"; }
   };
   class OperatorRn : public Operator {
     int n_;
   public:
-    OperatorRn(int n);
+    OperatorRn(int n);    
     inline int n() const { return n_; }
-    void call_new(PlaneWaveGto *ptr);
+    std::string str() const { return "Rn"; }
   };
   class OperatorPn : public Operator {
     int n_;
   public:
     OperatorPn(int n);
     inline int n() const { return n_; }
-    void call_new(PlaneWaveGto *ptr);
+    std::string str() const { return "Pn"; }
   };
   class OperatorDa : public Operator {
   public:
     int id_; // id for variable.
     OperatorDa(int id);
-    void call_new(PlaneWaveGto *ptr);
+    inline int id() const { return id_; }
+    std::string str() const { return "Da"; }
   };
   class OperatorGausspot : public Operator {
   public:
     complex<double> v0_, b_, q0_;
     OperatorGausspot(complex<double> v0, complex<double> b, complex<double> q0);
-    void call_new(PlaneWaveGto *basis);
+    std::string str() const { return "Gausspot"; }
   };
 
 }

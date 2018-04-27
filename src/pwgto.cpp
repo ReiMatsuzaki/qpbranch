@@ -83,71 +83,223 @@ namespace qpbranch {
        N = (2Re[g])^{n/2+1/4} Sqrt(1/Gamma[n+1/2])
     */
     assert(false||"not impl");
-    return 0.0;
+    return 0.0*nd*nA*gA;
   }
 
-  int PwgtoBufferBasic::maxn(int A) {
-    int maxn(0);
-    for(auto it = ncs_[A].begin(); it != ncs_[A].end(); ++it) {
-      if(maxn < it->first)
-	maxn = it->first;
-    }
-    return maxn;
+  OpBufBasic::OpBufBasic(int num) : num_(num), nums_(num_), ns_(num_), cs_(num_){}
+  int OpBufBasic::maxn(int A) {
+    assert(A>=0 && A<num_);
+    return ns_[A].maxCoeff();    
   }  
-  void PwgtoBufferBasic::matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
     opbra->matrix(this, basis, res);
   }
-  void PwgtoBufferBasic::matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) {
     basis->calc_matrix(this, opket, res);
   }
-  void PwgtoBufferBasic::matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) {
     basis->calc_matrix(this, opket, res);
   }
-
-  void PwgtoBufferId::call_setup(PlaneWaveGto *basis) {
-    basis->setup_op(this);
-  }
-  PwgtoBufferRn::PwgtoBufferRn(OperatorRn *op) : op_(op) {}
-  void PwgtoBufferRn::call_setup(PlaneWaveGto *basis) {
-    basis->setup_op(this);
-  }
-  PwgtoBufferPn::PwgtoBufferPn(OperatorPn *op) : op_(op) {}
-  void PwgtoBufferPn::call_setup(PlaneWaveGto *basis) {
-    basis->setup_op(this);
-  }
-  PwgtoBufferDa::PwgtoBufferDa(OperatorDa *op) : op_(op) {}
-  void PwgtoBufferDa::call_setup(PlaneWaveGto *basis) {
-    basis->setup_op(this);
+  void OpBufBasic::init_zero(int A, int num) {
+    nums_[A] = num;
+    ns_[A] = VectorXi::Zero(num);
+    cs_[A] = VectorXcd::Zero(num);
   }
 
-  PwgtoBufferGausspot::PwgtoBufferGausspot(OperatorGausspot *op, const VectorXi& ns) {
-    op_ = op;
-    ns_ = ns;
+  OpBufId::OpBufId(int num) : OpBufBasic(num) {
+    for(int A = 0; A < num_; A++) {
+      this->init_zero(A, 1);
+    }
   }
-  int PwgtoBufferGausspot::maxn(int A) { return ns_(A); }
-  void PwgtoBufferGausspot::call_setup(PlaneWaveGto *basis) {
-    basis->setup_op(this);
+  void OpBufId::setup(PlaneWaveGto *basis) {
+    for(int A = 0; A < num_; A++) {
+      ns_[A][0] = basis->ns_[A];
+      cs_[A][0] = basis->Ns_[A];
+    }
   }
-  void PwgtoBufferGausspot::matrix(PwgtoBuffer *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
+  OpBufRn::OpBufRn(int num, int n): OpBufBasic(num), n_(n) {
+    for(int A = 0; A < num_; A++) {
+      this->init_zero(A, 1);
+    }
+  }
+  void OpBufRn::setup(PlaneWaveGto *basis) {
+    for(int A = 0; A < num_; A++) {
+      ns_[A][0] = basis->ns_[A] + n_;
+      cs_[A][0] = basis->Ns_[A];
+    }
+  }
+  OpBufPn::OpBufPn(const VectorXi& ns, int n) : OpBufBasic(ns.size()), n_(n) {
+    
+    assert(n==1 || n==2);
+
+    for(int A = 0; A < num_; A++) {
+      int nA = ns(A);
+      vector<pair<int,complex<double> > > ncs;
+      if(n==1) {
+	if(nA == 0) {
+	  this->init_zero(A, 2);
+	} else {
+	  this->init_zero(A, 3);
+	}
+      } else if(n==2) {
+	if(nA == 0) {
+	  this->init_zero(A, 3);
+	} else if (nA == 1){
+	  this->init_zero(A, 4);
+	} else {
+	  this->init_zero(A, 5);
+	}
+      }
+    }
+  }
+  void OpBufPn::setup(PlaneWaveGto *basis) {
+    complex<double> ii(0.0, 1.0);
+    for(int A = 0; A < num_; A++) {
+      int nA = basis->ns_[A];      
+      double pA = basis->Ps_[A];
+      complex<double> gA = basis->gs_[A];
+      if(n_ == 1) {
+	complex<double> c = -ii*basis->Ns_[A];
+	ns_[A][0] = nA+1;
+	cs_[A][0] = c * (-2.0*gA);
+	ns_[A][1] = nA;
+	cs_[A][1] = c * (ii*pA);
+	if(nA>0) {
+	  ns_[A][2] = nA-1;
+	  cs_[A][2] = c * (1.0*nA);
+	}	
+      } else if(n_ == 2) {
+	complex<double> c = -ii*basis->Ns_[A];
+	ns_[A][0] = nA+2;
+	cs_[A][0] = c * 4.0*gA*gA;
+	ns_[A][1] = nA+1;
+	cs_[A][1] = c * (-4.0*ii*gA*pA);
+	ns_[A][2] = nA;
+	cs_[A][2] = c * (-2.0*gA*(nA+1.0) -2.0*nA*gA -pA*pA);
+	if(nA>0) {
+	  ns_[A][3] = nA-1;
+	  cs_[A][3] = c * (2.0*nA*ii*pA);
+	}
+	if(nA>1) {
+	  ns_[A][4] = nA-2;
+	  cs_[A][4] = c * (1.0*nA*(nA-1));
+	}
+      }
+    }
+  }
+  OpBufDa::OpBufDa(const VectorXi& ns, int id) : OpBufBasic(ns.size()), id_(id) {
+    for(int A = 0; A < ns.size(); A++) {
+      int nA = ns[A];
+      switch(id) {
+      case kIdDR:
+	if(nA == 0) 
+	  this->init_zero(A, 2);
+       else 
+	  this->init_zero(A, 3);
+	break;
+      case kIdDP:
+	this->init_zero(A, 1);
+	break;
+      case kIdDgr:
+	this->init_zero(A, 2);
+	break;
+      case kIdDgi:
+	this->init_zero(A, 1);
+	break;
+      default:
+	assert(false||"invalid id");
+      }
+    }
+  }
+  void OpBufDa::setup(PlaneWaveGto *basis) {
+    complex<double> ii(0, 1);
+    for(int A = 0; A < basis->num_; A++) {
+      int nA = basis->ns_[A];
+      double pA = basis->Ps_[A];
+      complex<double> gA = basis->gs_[A];
+      double NA = basis->Ns_[A];
+      switch(id_) {
+      case kIdDR:
+	ns_[A][0] = nA+1;
+	cs_[A][0] = (-NA) * (-2.0*gA);
+	ns_[A][1] = nA;
+	cs_[A][1] = (-NA) * (ii*pA);
+	if(nA>0) {
+	  ns_[A][2] = nA-1;
+	  cs_[A][1] = (-NA) * (1.0*nA);
+	}
+	break;
+      case kIdDP:
+	ns_[A][0] = nA+1;
+	cs_[A][0] = NA * ii;
+	break;
+      case kIdDgr:
+	ns_[A][0] = nA+2;
+	cs_[A][0] = -NA;
+	ns_[A][1] = nA;
+	cs_[A][1] = calc_nterm(1, nA, real(gA));
+	break;
+      case kIdDgi:
+	ns_[A][0] = nA+2;
+	cs_[A][0] = -ii*NA;
+	break;
+      default:
+	assert(false||"invalid id");
+      }
+    }
+  }
+
+  OpBufGausspot::OpBufGausspot(const VectorXi& ns, OperatorGausspot *op) : ns_(ns), op_(op) {}
+  int OpBufGausspot::maxn(int A) { return ns_(A); }
+  void OpBufGausspot::setup(PlaneWaveGto *basis) {
+  }
+  void OpBufGausspot::matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
     opbra->matrix(this, basis, res);
   }
-  void PwgtoBufferGausspot::matrix(PwgtoBufferBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufGausspot::matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) {
     assert(false&&"not impl");
   }
-  void PwgtoBufferGausspot::matrix(PwgtoBufferGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufGausspot::matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) {
     assert(false&&"not impl");
   }
   
+
+  OpBuf* make_op_buff(const VectorXi& ns, Operator *op) {
+
+    int num = ns.size();
+    
+    const type_info& optype = typeid(*op);
+    if(optype == typeid(OperatorId)) {
+      return new OpBufId(num);
+    } else if(optype == typeid(OperatorRn)) {
+      auto opop = static_cast<OperatorRn*>(op);
+      return new OpBufRn(num, opop->n());
+    } else if(optype == typeid(OperatorPn)) {
+      auto opop = static_cast<OperatorPn*>(op);
+      return new OpBufPn(ns, opop->n());
+    } else if(optype == typeid(OperatorDa)) {
+      auto opop = static_cast<OperatorDa*>(op);
+      return new OpBufDa(ns, opop->id());
+    } else if(optype == typeid(OperatorGausspot)) {
+      auto opop = static_cast<OperatorGausspot*>(op);
+      return new OpBufGausspot(ns, opop);
+    } else {
+      cerr << "Unsupported operator" << endl;
+      abort();
+    }
+  }
   
   
   PlaneWaveGto::PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops):
     num_(ns.size()), nop_(ops.size()), ns_(ns), gs_(num_), Rs_(num_), Ps_(num_),
     ops_(ops), Ns_(num_), maxn_(num_),
     gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_) {
-
-    for(auto it = ops.begin(); it!=ops.end(); ++it) 
-      (*it)->call_new(this);
-
+    
+    for(auto it = ops.begin(); it!=ops.end(); ++it) {
+      Operator *op = *it;
+      buffer_map_[op] = make_op_buff(ns, op);
+    }
+    
     for(int A = 0; A < num_; A++) {
       int maxn(0);
       for(auto it =  buffer_map_.begin(); it != buffer_map_.end(); ++it) {
@@ -198,7 +350,7 @@ namespace qpbranch {
 
     // each operator (visitor pattern)
     for(auto it = buffer_map_.begin(); it != buffer_map_.end(); ++it) {
-      it->second->call_setup(this);
+      it->second->setup(this);
     }
     
   }
@@ -226,188 +378,43 @@ namespace qpbranch {
     }
   }
   
-  void PlaneWaveGto::new_op(OperatorId *op) {
-    auto ptr = new PwgtoBufferId();
-    for(int A = 0; A < num_; A++) {
-      vector<pair<int,complex<double>>> ncs(1);
-      ncs[0] = make_pair(ns_[A], 1.0);
-      ptr->ncs_.push_back(ncs);
-    }
-    buffer_map_[op] = ptr;
-  }
-  void PlaneWaveGto::new_op(OperatorRn *op) {
-    auto ptr = new PwgtoBufferRn(op);
-    for(int A = 0; A < num_; A++) {
-      vector<pair<int,complex<double>>> ncs(1);
-      ncs[0] = make_pair(ns_[A]+op->n(), 1.0);
-      ptr->ncs_.push_back(ncs);
-    }
-    buffer_map_[op] = ptr;
-  }
-  void PlaneWaveGto::new_op(OperatorPn *op) {
-    assert(op->n()==1 || op->n()==2);
-    auto ptr = new PwgtoBufferPn(op);
-    for(int A = 0; A < num_; A++) {
-      int nA = ns_(A);
-      vector<pair<int,complex<double> > > ncs;
-      if(op->n()==1) {
-	ncs.push_back(make_pair(nA+1, 1.0));
-	ncs.push_back(make_pair(nA,   1.0));
-	if(nA>0)
-	  ncs.push_back(make_pair(nA-1, 1.0));
-      } else if(op->n()==2) {
-	ncs.push_back(make_pair(nA+2, 1.0));
-	ncs.push_back(make_pair(nA+1, 1.0));
-	ncs.push_back(make_pair(nA,   1.0));
-	if(nA>0)
-	  ncs.push_back(make_pair(nA-1, 1.0));
-	if(nA>1)
-	  ncs.push_back(make_pair(nA-2, 1.0));
-      }
-      ptr->ncs_.push_back(ncs);
-    }
-    buffer_map_[op] = ptr;
-  }
-  void PlaneWaveGto::new_op(OperatorDa *op) {
-    auto ptr = new PwgtoBufferDa(op);
-    for(int A = 0; A < num_; A++) {
-      int nA = ns_(A);
-      vector<pair<int,complex<double>>> ncs;
-      switch(op->id_) {
-      case kIdDR:
-	ncs.push_back(make_pair(nA+1, 1.0));
-	ncs.push_back(make_pair(nA,   1.0));
-	if(nA>0)
-	  ncs.push_back(make_pair(nA-1, 1.0));
-	break;
-      case kIdDP:
-	ncs.push_back(make_pair(nA+1, 1.0));
-	break;
-      case kIdDgr:
-	ncs.push_back(make_pair(nA+2, 1.0));
-	ncs.push_back(make_pair(nA+0, 1.0));
-	break;
-      case kIdDgi:
-	ncs.push_back(make_pair(nA+2, 1.0));
-	break;
-      default:
-	assert(false||"invalid id");
-      }
-      ptr->ncs_.push_back(ncs);
-    }
-    buffer_map_[op] = ptr;
-  }
-  void PlaneWaveGto::new_op(OperatorGausspot *op) {
-    auto ptr = new PwgtoBufferGausspot(op, ns_);
-    buffer_map_[op] = ptr;
-  }
-  void PlaneWaveGto::setup_op(PwgtoBufferId *op) {
-    for(int A = 0; A<num_;A++) {
-      op->ncs_[A][0].second = Ns_[A];
-    }
-  }
-  void PlaneWaveGto::setup_op(PwgtoBufferRn *op) {
-    for(int A = 0; A<num_;A++) {
-      op->ncs_[A][0].second = Ns_[A];
-    }
-  }
-  void PlaneWaveGto::setup_op(PwgtoBufferPn *op) {
-    complex<double> ii(0.0, 1.0);
-    if(op->op_->n()==1) {
-      for(int A = 0; A < num_; A++) {
-	int nA = ns_[A];
-	complex<double> c = -ii*Ns_[A];
-	double pA = Ps_[A];
-	complex<double> gA = gs_[A];
-	op->ncs_[A][0].second = c * (-2.0*gA);
-	op->ncs_[A][1].second = c * (ii*pA);
-	if(nA>0)
-	  op->ncs_[A][2].second = c * (1.0*nA);
-      }
-    } else if(op->op_->n()==2) {
-      for(int A = 0; A < num_; A++) {
-	int nA = ns_[A];
-	complex<double> c = -Ns_[A];
-	double pA = Ps_[A];
-	complex<double> gA = gs_[A];
-	op->ncs_[A][0].second = c * 4.0*gA*gA;
-	op->ncs_[A][1].second = c * (-4.0*ii*gA*pA);
-	op->ncs_[A][2].second = c * (-2.0*gA*(nA+1.0) -2.0*nA*gA -pA*pA);
-	if(nA>0)
-	  op->ncs_[A][3].second = c * (2.0*nA*ii*pA);
-	if(nA>1)
-	  op->ncs_[A][4].second = c * (1.0*nA*(nA-1));
-      }
-    }
-  }
-  void PlaneWaveGto::setup_op(PwgtoBufferDa *buf) {
-    complex<double> ii(0.0, 1.0);
-    for(int A = 0; A < num_; A++) {
-      int nA = ns_[A];      
-      double pA = Ps_[A];
-      complex<double> gA = gs_[A];
-      double NA = Ns_[A];
-      complex<double> c = -Ns_[A];
-      switch(buf->op_->id_) {
-      case kIdDR: // dR	
-	buf->ncs_[A][0].second = c * (-2.0*gA);
-	buf->ncs_[A][1].second = c * (ii*pA);
-	if(nA>0)
-	  buf->ncs_[A][2].second = c * (1.0*nA);
-	break;
-      case kIdDP: // dP
-	buf->ncs_[A][0].second =  NA * ii;
-	break;
-      case kIdDgr: // dgr
-	buf->ncs_[A][0].second =  -NA;
-	buf->ncs_[A][1].second =  NA * calc_nterm(1, nA, real(gA));
-	break;
-      case kIdDgi: // dgi
-	buf->ncs_[A][0].second =  -ii*NA;
-	break;
-      default:
-	assert(false||"invalid id");
-      }
-    }
-  }
-  void PlaneWaveGto::setup_op(PwgtoBufferGausspot *op) {}
-  void PlaneWaveGto::calc_matrix(PwgtoBufferBasic *bra, PwgtoBufferBasic *ket, MatrixXcd *res) {
+  void PlaneWaveGto::calc_matrix(OpBufBasic *bra, OpBufBasic *ket, MatrixXcd *res) {
     
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {	
 	complex<double> cumsum(0);
-	const auto& ncs_bra(bra->ncs_[A]);
-	const auto& ncs_ket(ket->ncs_[B]);
-	for(auto it = ncs_bra.begin(); it != ncs_bra.end(); ++it)
-	  for(auto jt = ncs_ket.begin(); jt != ncs_ket.end(); ++jt) 
-	    cumsum += conj(it->second) * jt->second * getd(A,B,it->first, jt->first, 0);
+	const auto& nAs(bra->ns_[A]); // ncs_bra(bra->ncs_[A]);
+	const auto& nBs(ket->ns_[B]); //const auto& ncs_ket(ket->ncs_[B]);
+	const auto& cAs(bra->cs_[A]);
+	const auto& cBs(ket->cs_[B]);
+	for(int i = 0; i < bra->nums_[A]; i++)
+	  for(int j = 0; j < ket->nums_[B]; j++) 
+	    cumsum += conj(cAs[i]) * cBs[j] * getd(A,B,nAs[i], nBs[j], 0);
 	(*res)(A,B) = cumsum * eAB_(A,B) * hAB_(A,B);
       }
     }
 
   }
-  void PlaneWaveGto::calc_matrix(PwgtoBufferBasic *ibra, PwgtoBufferGausspot *iket, MatrixXcd *res) {
-    auto opV = iket->op_;
+  void PlaneWaveGto::calc_matrix(OpBufBasic *bra, OpBufGausspot *ket, MatrixXcd *res) {
+    auto opV = ket->op_;
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {
+	const auto& nAs(bra->ns_[A]);
+	const auto& cAs(bra->cs_[A]);
 	int nB = ns_[B];
-	int nA_nB = 0;
-	vector<pair<int,complex<double> > >& ncs(ibra->ncs_[A]);
-	for(auto it = ncs.begin(); it != ncs.end(); ++it) 
-	  nA_nB = max(nA_nB, it->first);
-	nA_nB += nB;
+	complex<double> cB = Ns_[B];
 
-	VectorXcd intg(nA_nB+1);
-	dwn_gaussint_shift(nA_nB, opV->b_, gAB_(A,B), RAB_(A,B), &intg);
+	int max_nA_nB = nAs.maxCoeff() + nB;
+	VectorXcd intg(max_nA_nB+1);
+	dwn_gaussint_shift(max_nA_nB, opV->b_, gAB_(A,B), RAB_(A,B), &intg);
+	
 	complex<double> cumsum(0.0);
-	for(auto it = ncs.begin(); it != ncs.end(); ++it) {
-	  int nA = it->first;
-	  complex<double> cA = it->second;
+	for(int i = 0; i < bra->num_; i++) {
+	  int nA = nAs[i];
 	  complex<double> cumsum1(0.0);
-	  for(int N = 0; N <= nA_nB; N++) {
+	  for(int N = 0; N <= max_nA_nB; N++)
 	    cumsum1 += getd(A,B,nA,nB,N) * intg(N);
-	  }
-	  cumsum += cumsum1 * conj(cA) * Ns_[B];
+	  cumsum += cumsum1 * conj(cAs[i]) * cB;
 	}
 	(*res)(A,B) = cumsum * eAB_(A,B) * opV->v0_;
       }
