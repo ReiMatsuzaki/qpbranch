@@ -29,7 +29,19 @@ namespace qpbranch {
   const int kIdDgr = 3;
   const int kIdDgi = 4;
 
+  // interface
+  class BasisSet {
+  public:
+    virtual ~BasisSet() {}
+    virtual void setup() = 0;    
+    virtual int size() const = 0;
+    virtual void matrix(Operator *ibra, Operator *iket, MatrixXcd *res) = 0;
+    virtual void at(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) = 0;
+    
+  };
+
   class PlaneWaveGto;
+  class Pwgto1c;
   class OpBufBasic;
   class OpBufGausspot;
 
@@ -41,9 +53,15 @@ namespace qpbranch {
     virtual void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) = 0;
     virtual void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
     virtual void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
+    virtual void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
+    virtual void setup(Pwgto1c *basis) = 0;
+    virtual void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
   };
   // Buffer for basic case. op.phi_A can be represented by polynomial times gauss function
-  //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA))
+  //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA)) 
   class OpBufBasic : public OpBuf {
   public:
     int num_;
@@ -53,39 +71,50 @@ namespace qpbranch {
     /*    vector<vector<pair<int,complex<double> > > > ncs_; // ncs_[A][i] */
     OpBufBasic(int num);
     int maxn(int A);
+    void init_zero(int A, int num);
     virtual void setup(PlaneWaveGto *basis) = 0;    
     void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res);
     void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
     void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void init_zero(int A, int num);
+    void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    virtual void setup(Pwgto1c *basis) = 0;    
+    void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
+    void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
   class OpBufId : public OpBufBasic {
   public:
-    OpBufId(int num);
+    OpBufId(const VectorXi& ns);
     void setup(PlaneWaveGto *basis);
+    void setup(Pwgto1c *basis);
   };
   class OpBufRn : public OpBufBasic {
   public:
     int n_;
-    OpBufRn(int num, int n);
+    OpBufRn(const VectorXi& ns, int n);
     void setup(PlaneWaveGto *basis);
+    void setup(Pwgto1c *basis);
   };
   class OpBufPn : public OpBufBasic {
   public:
     int n_;
     OpBufPn(const VectorXi& ns, int n);
     void setup(PlaneWaveGto *basis);
+    void setup(Pwgto1c *basis);
   };
   class OpBufDa : public OpBufBasic {
   public:
     int id_;
     OpBufDa(const VectorXi& ns, int id);
     void setup(PlaneWaveGto *basis);
+    void setup(Pwgto1c *basis);
   };
   class OpBufGausspot : public OpBuf {
   public:
-    VectorXi ns_;
-    OperatorGausspot *op_;    
+    int num_;
+    VectorXi ns_;    
+    OperatorGausspot *op_;
     OpBufGausspot(const VectorXi& ns, OperatorGausspot *op);
     
     int maxn(int A);
@@ -93,19 +122,26 @@ namespace qpbranch {
     void matrix(OpBuf *opbrat, PlaneWaveGto *basis, MatrixXcd *res);
     void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
     void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
+    void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    void setup(Pwgto1c *basis);
+    void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
+    void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
 
   OpBuf* make_op_buff(PlaneWaveGto *basis, Operator *op);
   
-  class PlaneWaveGto {
+  class PlaneWaveGto : public BasisSet {
   public:    
     // data size
     int num_, nop_;
-    // variable
+    // const
     VectorXi ns_;
-    VectorXcd gs_;
-    VectorXd Rs_, Ps_;
     vector<Operator*> ops_;
+    // variable    
+    VectorXcd gs_;
+    VectorXd Rs_, Ps_;    
     // intermediate
     map<Operator*, OpBuf*> buffer_map_;
     VectorXd Ns_;
@@ -114,17 +150,38 @@ namespace qpbranch {
     multi_array<multi_array<complex<double>,3>*,2> *d_;
     // Main
     PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops);
-    virtual ~PlaneWaveGto();
+    ~PlaneWaveGto();
     void setup();
+    int size() const { return num_; }
     void matrix(Operator *ibra, Operator *iket, MatrixXcd *res);
     void at(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-    // Calculation
-    void calc_matrix(OpBufBasic *ibra, OpBufBasic *iket, MatrixXcd *res);
-    void calc_matrix(OpBufBasic *ibra, OpBufGausspot *iket, MatrixXcd *res);
-  protected:
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
+  };
+
+  class Pwgto1c : public BasisSet {
+  public:
+    // data size
+    int num_, nop_;
+    // cont
+    VectorXi ns_;
+    vector<Operator*> ops_;
+    // variable
+    double R0_, P0_;
+    complex<double> g0_;
+    // intermediate
+    VectorXd Ns_;
+    int maxn_;
+    map<Operator*, OpBuf*> buf_map_;
+    VectorXcd gints2n_; // gints[n] = Int[q^{2n} Exp[-2Re[q0]q^2]]
+    // Main
+    Pwgto1c(const VectorXi& ns, double R0, double P0, complex<double> g0, const vector<Operator*>& ops);
+    ~Pwgto1c();
+    void setup();
+    int size() const { return num_; }
+    void matrix(Operator *opbra, Operator *opket, MatrixXcd *res);
+    void at(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
   
 }

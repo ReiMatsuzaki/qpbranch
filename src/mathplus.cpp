@@ -1,7 +1,9 @@
 #include <iostream>
 #include <math.h>
-#include "mathplus.hpp"
+
 #include <Eigen/Core>
+
+#include <qpbranch/mathplus.hpp>
 
 namespace qpbranch {
   using namespace std;

@@ -1,12 +1,16 @@
 #include <iostream>
+
 #include <gtest/gtest.h>
-#include "mathplus.hpp"
-#include "eigenplus.hpp"
-#include "pwgto.hpp"
+#include <json11.hpp>
+
+#include <qpbranch/mathplus.hpp>
+#include <qpbranch/eigenplus.hpp>
+#include <qpbranch/pwgto.hpp>
 
 using namespace std;
 using namespace qpbranch;
 using namespace boost;
+using namespace json11;
 
 TEST(utest_pwgto, test_coef_d) {
   complex<double> gAB(1, 0.2);
@@ -123,6 +127,50 @@ TEST(utest_pwgto, multipole) {
 
   delete basis;
   
+}
+TEST(utest_pwgto, pn) {
+
+  const string str0 = R"("k1":"v1")";
+  string err;
+  auto json = Json::parse(str0, err);
+  
+  int num = 5;
+  auto id = new OperatorId();
+  auto P1 = new OperatorPn(1);
+  auto P2 = new OperatorPn(2);
+  vector<Operator*> ops = {id, P1, P2};
+  VectorXi ns(num); ns << 0, 0, 2, 1, 0;
+  auto *basis = new PlaneWaveGto(ns, ops);
+  basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
+  basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
+  basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
+  basis->setup();
+
+  MatrixXcd M01(num, num);
+  basis->matrix(id, P1, &M01);
+
+  MatrixXcd M10(num, num);
+  basis->matrix(P1, id, &M10);
+
+  MatrixXcd M02(num, num);
+  basis->matrix(id, P2, &M02);
+
+  MatrixXcd M11(num, num);
+  basis->matrix(P1, P1, &M11);
+
+  MatrixXcd M20(num, num);
+  basis->matrix(P2, id, &M20);
+  
+  for(int A = 0; A < num; A++) {
+    for(int B = 0; B < num; B++) {
+      double tol = pow(10.0, -10);
+      ASSERT_NEAR(real(M01(A,B)), real(M10(A,B)), tol) <<"A:"<<A<<endl<<"B:"<<B;
+      ASSERT_NEAR(real(M11(A,B)), real(M02(A,B)), tol) <<"A:"<<A<<endl<<"B:"<<B;
+      ASSERT_NEAR(real(M11(A,B)), real(M20(A,B)), tol) <<"A:"<<A<<endl<<"B:"<<B;
+    }
+  }
+
+  delete basis;
 }
 TEST(utest_pwgto, test_harmonic) {
 

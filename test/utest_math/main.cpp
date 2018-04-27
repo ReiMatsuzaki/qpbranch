@@ -1,6 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include "mathplus.hpp"
+#include <qpbranch/mathplus.hpp>
 
 using namespace std;
 using namespace qpbranch;

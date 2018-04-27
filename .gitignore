@@ -23,5 +23,6 @@ f90/utest
 **/fig
 a.out
 *.x
+*.d
 *.dSYM
 **/auto/
