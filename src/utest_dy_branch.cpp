@@ -5,6 +5,6 @@
 using namespace std;
 using namespace qpbranch;
 
-TEST(utest_pwgto, test_first) {
+TEST(utest_dy_branch, test_first) {
   ASSERT_EQ(2, 1+1);
 }

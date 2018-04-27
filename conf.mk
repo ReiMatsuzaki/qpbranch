@@ -17,6 +17,8 @@ mod2obj = $(addprefix ${BUILD}/, $(addsuffix, .o, $(1)))
 
 %.x:
 	${CXX} $^ -o $@ ${LIBS} ${LDFLAGS}
+%.o: %.cpp
+	${CXX} ${CXXFLAGS} ${INCLUDE} -c $< -o $@
 ${BUILD}/%.o: ${SRC}/%.cpp
 	@if [ ! -d ${BUILD} ]; \
 	   then mkdir -p ${BUILD}; \

@@ -100,23 +100,20 @@ namespace qpbranch {
     for(int iop = 0; iop < (int)ops_opt_.size(); iop++) {
       double c;
       Operator *op;
-      switch(ops_opt_[iop]) {
-      case DR_:
+      if(ops_opt_[iop] == DR_) {
 	op = DP_;
 	c = 1;
-	break;
-      case DP_:
+      } else if(ops_opt_[iop] == DP_) {
 	op = DR_;
 	c = 1;
-	break;
-      case Dgr_:
+      } else if(ops_opt_[iop] == Dgr_) {
 	op = Dgi_;
 	c = 4.0*gr0_*gr0_;
-	break;
-      case Dgi_:
+      } else if(ops_opt_[iop] == Dgi_) {
 	op = Dgr_;
 	c = c = 4.0*gr0_*gr0_;
-	break;	
+      } else {
+	assert(false||"invalid op");
       }
       this->calc_H(op, &H);
       (*res)[iop] = 2.0 * c * real(c_.dot(H*c_));
@@ -131,10 +128,10 @@ namespace qpbranch {
     
     multi_array<MatrixXcd, 2> Snm(extents[numopt_+1][numopt_+1]);
     multi_array<MatrixXcd, 1> Hn0(extents[numopt_+1]);
-    vector<Operators> ops(ops_opt_);
+    vector<Operator*> ops(ops_opt_);
     ops.push_back(id_);
 
-    int id = numopt_ // index for operator id_
+    int id = numopt_; // index for operator id_
 
     for(int n = 0; n < 1+numopt_; n++) {
       Hn0[n] = MatrixXcd::Zero(num_,num_);
@@ -166,7 +163,7 @@ namespace qpbranch {
       y(n) = is_tdvp ? real(t1-t2) : imag(t1-t2);
     }
 
-    dgesv(S, y, dotx);
+    dgesv(C, y, res);
     
   }
   void DySetPoly::calc_H(Operator *op_bra, MatrixXcd *res) {
@@ -175,21 +172,23 @@ namespace qpbranch {
     basis_->matrix(op_bra, pot_, &V);
     *res = 1.0/(2*m_) * P2 + V;
   }  
-  void DySetPoly::calc_eff_H(const vector<double>& dotx, MatrixXcd *ptr_res) {
+  void DySetPoly::calc_eff_H(const VectorXd& dotx, MatrixXcd *ptr_res) {
     complex<double> ii(0.0, 1.0);
     MatrixXcd  M(num_,num_);
     MatrixXcd& res(*ptr_res);
     this->calc_H(id_, &res);
-    for(int iop = 0; iop < ops_opt_.size(); iop++) {
+    for(int iop = 0; iop < (int)ops_opt_.size(); iop++) {
       basis_->matrix(id_, ops_opt_[iop], &M);
       res += -ii*M*dotx[iop];
     }
   }
-  void DySet::update_basis() {
-    basis->Rs_ = q0_;
-    basis->Ps_ = q0_;
-    basis->gs_ = complex<double>(gr0_, gi0_);
-    basis_->update();
+  void DySetPoly::update_basis() {
+    for(int A = 0; A < basis_->num_; A++) {
+      basis_->Rs_(A) = q0_;
+      basis_->Ps_(A) = p0_;
+      basis_->gs_(A) = complex<double>(gr0_, gi0_);
+    }
+    basis_->setup();
   }  
 
 }
