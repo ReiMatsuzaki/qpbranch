@@ -6,12 +6,14 @@
 #include <qpbranch/mathplus.hpp>
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/pwgto.hpp>
+#include <qpbranch/pwgto_buf.hpp>
 
 using namespace std;
 using namespace qpbranch;
 using namespace boost;
 using namespace json11;
 
+/*
 TEST(utest_pwgto, test_coef_d) {
   complex<double> gAB(1, 0.2);
   complex<double> wAB(1.2, 0);
@@ -32,6 +34,7 @@ TEST(utest_pwgto, test_coef_d) {
   }
 
 }
+*/
 TEST(utest_pwgto, overlap) {
 
   int num = 4;
@@ -72,6 +75,7 @@ TEST(utest_pwgto, overlap) {
   ASSERT_DOUBLE_EQ(imag(ref), imag(calc)) << "A:" << A << endl << "B:" << B << endl;
   
 }
+/*
 TEST(utest_pwgto, multipole) {
 
   int num = 5;
@@ -248,9 +252,9 @@ TEST(utest_pwgto, test_gausspot) {
 
   delete basis;
   
-  /*
-a:    -0.8326517408E+00    -0.0000000000E+00
-b:    -0.8252221444E+00     0.0000000000E+00
-  */
+
+//a:    -0.8326517408E+00    -0.0000000000E+00
+//b:    -0.8252221444E+00     0.0000000000E+00
   
 }
+*/

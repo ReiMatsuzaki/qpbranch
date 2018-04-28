@@ -66,11 +66,15 @@ ${BUILD}/json11.o: ${JSON11}/json11.cpp
 	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c -o $@ $<
 
+OBJS=$(addprefix ${BUILD}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
+${BUILD}/libqpbranch.a: ${OBJS}
+	${AR} ${ARFLAGS} $@ $^
+
 # -- command --
 .PHONY: clean_all check
 
 check:
-	cd ${TEST}/utest_${utest}; make all
+	cd ${TEST}/${utest}; make all
 
 clean_all:
 	${RM} -r ${QPBRANCH_ROOT}/build

@@ -9,7 +9,7 @@ main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: main.cpp
 
 main.x: LIBS+=${GTEST_LIBS}
-main.x: ${BUILD}/libgtest_main.a ${BUILD}/mathplus.o main.o
+main.x: ${OBJS}
 
 .PHONY: all
 

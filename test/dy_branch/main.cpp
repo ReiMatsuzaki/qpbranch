@@ -1,6 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include "dy_branch.hpp"
+#include <qpbranch/dy_branch.hpp>
 
 using namespace std;
 using namespace qpbranch;

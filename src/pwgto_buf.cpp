@@ -46,6 +46,71 @@ namespace qpbranch {
     return 0.0*nd*nA*gA;
   }
 
+  void hermite_coef_d(complex<double> gAB, complex<double> wAB, double RA, double RB,
+		      int maxnA, int maxnB, multi_array<complex<double>, 3> *res) {
+    assert(maxnA>=0);
+    assert(maxnB>=0);
+    
+    int maxNk = maxnA + maxnB;
+    
+    (*res)[0][0][0] = 1.0;
+
+    for(int nA = 0; nA <= maxnA; nA++) {
+      for(int nB = 0; nB <= maxnB; nB++) {
+	for(int Nk = nA+nB+1; Nk<=maxNk; Nk++) {
+	  (*res)[nA][nB][Nk] = 0.0;
+	}
+      }
+    }
+
+    for(int nAB = 1; nAB <= maxnA+maxnB; nAB++) {
+      for(int nA = 0; nA <= min(maxnA, nAB); nA++) {
+	int nB = nAB-nA;
+	if(nB<=maxnB) {
+	  for(int Nk = 0; Nk <= min(nAB, maxNk); Nk++) {
+	    complex<double> v(0);
+	    if(nA > 0) {
+	      v += (wAB-RA) * (*res)[nA-1][nB][Nk];
+	      if(Nk-1 >= 0) 
+		v += 1.0/(2.0*gAB) * (*res)[nA-1][nB][Nk-1];
+	      if(Nk+1 <= maxNk)
+		v += (Nk+1.0) * (*res)[nA-1][nB][Nk+1];
+	    } else if(nB > 0) {
+	      v += (wAB-RB) * (*res)[nA][nB-1][Nk];
+	      if(Nk-1>=0)
+		v += 1.0/(2.0*gAB) * (*res)[nA][nB-1][Nk-1];
+	      if(Nk+1<=maxNk)
+		v += (Nk+1.0)   * (*res)[nA][nB-1][Nk+1];
+	    }
+	    (*res)[nA][nB][Nk] = v;
+	  }
+	}
+      }
+    }
+  }
+  complex<double> hermite_coef_d_0(complex<double> gAB, complex<double> wAB, double RA, double RB,
+				   int nA, int nB, int Nk) {
+    if(nA==0 && nB==0 && Nk==0)
+      return 1.0;
+    
+    if(Nk<0 || Nk>nA+nB)
+      return 0.0;
+
+    if(nA>0) {
+      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk-1);
+      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk  );
+      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk+1);
+      return 1.0/(2.0*gAB)*res0 + (wAB-RA)*res1 + (Nk+1.0)*res2;
+    } else {
+      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk-1);
+      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk  );
+      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk+1);
+      return 1.0/(2.0*gAB)*res0 + (wAB-RB)*res1 + (Nk+1.0)*res2;
+    }    
+  }
+
+  
+
   OpBufBasic::OpBufBasic(int num) : num_(num), nums_(num_), ns_(num_), cs_(num_){}
   int OpBufBasic::maxn(int A) {
     assert(A>=0 && A<num_);
