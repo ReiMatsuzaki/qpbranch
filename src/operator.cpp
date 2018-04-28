@@ -1,5 +1,5 @@
 #include <qpbranch/operator.hpp>
-#include <qpbranch/pwgto.hpp>
+
 namespace qpbranch {
   OperatorRn::OperatorRn(int n) : n_(n) {}
   OperatorPn::OperatorPn(int n) : n_(n) {}

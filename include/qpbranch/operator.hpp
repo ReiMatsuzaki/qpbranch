@@ -6,8 +6,6 @@
 namespace qpbranch {
 
   using std::complex;
-
-  class PlaneWaveGto;
   
   class Operator {
   public:
