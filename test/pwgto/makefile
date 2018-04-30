@@ -10,8 +10,8 @@ main.o: INCLUDE+=${GTEST_INCLUDE}
 main.o: main.cpp
 
 main.x: LIBS+=${GTEST_LIBS}
-main.x: ${BUILD}/libqpbranch.a ${BUILD}/libgtest_main.a main.o
-	${CXX} main.o -o $@ -L${BUILD} -lqpbranch -lgtest_main  ${LIBS} ${LDFLAGS}
+main.x: ${LIB}/libqpbranch.a ${LIB}/libgtest_main.a main.o
+	${CXX} main.o -o $@ -L${LIB} -lqpbranch -lgtest_main ${LIBS} ${LDFLAGS}
 
 .PHONY: all
 

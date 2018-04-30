@@ -10,18 +10,19 @@ utest:=pwgto
 # -- Directories --
 SRC:=${QPBRANCH_ROOT}/src
 BUILD:=${QPBRANCH_ROOT}/build/${buildtype}
+OBJ:=${BUILD}/obj
+LIB:=${BUILD}/lib
+BIN:=${BUILD}/bin
 INCLUDE:=${QPBRANCH_ROOT}/include
 EXTERNAL:=${QPBRANCH_ROOT}/external
 TEST:=${QPBRANCH_ROOT}/test
 EIGEN:=${EXTERNAL}/eigen-git-mirror
 GTEST:=${EXTERNAL}/googletest/googletest
 JSON11:=${EXTERNAL}/json11
-#VPATH=${BUILD}:${SRC}
-#VPATH:=${SRC}
 
 # -- dependencies --
 SRCS=$(wildcard ${SRC}/*.cpp)
-DEPS:=${SRCS:%.cpp=${BUILD}/%.d}
+DEPS:=${SRCS:%.cpp=${OBJ}/%.d}
 -include ${DEPS}
 
 # -- options --
@@ -43,31 +44,32 @@ GTEST_CPPFLAGS = -isystem ${GTEST}/include -I${GTEST}/include -I${GTEST}
 
 # -- compile --
 %.x:
-	 @[ -d ${BUILD} ] || mkdir -p ${BUILD}
+	 @[ -d ${BIN} ] || mkdir -p ${BIN}
 	${CXX} $^ -o $@ ${LIBS} ${LDFLAGS}
 %.o: %.cpp 
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c $< -o $@
 
-${BUILD}/%.o: ${SRC}/%.cpp
-	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
+${OBJ}/%.o: ${SRC}/%.cpp
+	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c $< -o $@
 
-${BUILD}/gtest-all.o: ${GTEST}/src/gtest-all.cc
-	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
+${OBJ}/gtest-all.o: ${GTEST}/src/gtest-all.cc
+	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${GTEST_CPPFLAGS} ${CXXDEBUG} -c -o $@ $<
-${BUILD}/gtest_main.o: ${GTEST}/src/gtest_main.cc
-	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
+${OBJ}/gtest_main.o: ${GTEST}/src/gtest_main.cc
+	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${GTEST_CPPFLAGS} ${CXXDEBUG} -c -o $@ $<
-${BUILD}/libgtest_main.a: ${BUILD}/gtest-all.o ${BUILD}/gtest_main.o
-	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
+${LIB}/libgtest_main.a: ${OBJ}/gtest-all.o ${OBJ}/gtest_main.o
+	@[ -d ${LIB} ] || mkdir -p ${LIB}
 	${AR} ${ARFLAGS} $@ $^
 
-${BUILD}/json11.o: ${JSON11}/json11.cpp
-	@[ -d ${BUILD} ] || mkdir -p ${BUILD}
+${OBJ}/json11.o: ${JSON11}/json11.cpp
+	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c -o $@ $<
 
-OBJS=$(addprefix ${BUILD}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
-${BUILD}/libqpbranch.a: ${OBJS}
+OBJS=$(addprefix ${OBJ}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
+${LIB}/libqpbranch.a: ${OBJS}
+	@[ -d ${LIB} ] || mkdir -p ${LIB}
 	${AR} ${ARFLAGS} $@ $^
 
 # -- command --
