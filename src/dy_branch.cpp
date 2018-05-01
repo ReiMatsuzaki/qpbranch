@@ -1,6 +1,6 @@
 #include <boost/multi_array.hpp>
-#include "dy_branch.hpp"
-#include "eigenplus.hpp"
+#include <qpbranch/dy_branch.hpp>
+#include <qpbranch/eigenplus.hpp>
 
 namespace qpbranch {
 
@@ -111,7 +111,7 @@ namespace qpbranch {
 	c = 4.0*gr0_*gr0_;
       } else if(ops_opt_[iop] == Dgi_) {
 	op = Dgr_;
-	c = c = 4.0*gr0_*gr0_;
+	c = 4.0*gr0_*gr0_;
       } else {
 	assert(false||"invalid op");
       }

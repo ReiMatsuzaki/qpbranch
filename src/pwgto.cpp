@@ -6,67 +6,6 @@ using boost::extents;
 
 namespace qpbranch {
   
-  /*
-  void calc_matrix(PlaneWaveGto *basis, OpBufBasic *bra, OpBufBasic *ket, MatrixXcd *res) {
-    for(int A = 0; A < basis->size(); A++) {
-      for(int B = 0; B < basis->size(); B++) {	
-	complex<double> cumsum(0);
-	const auto& nAs(bra->ns_[A]); // ncs_bra(bra->ncs_[A]);
-	const auto& nBs(ket->ns_[B]); //const auto& ncs_ket(ket->ncs_[B]);
-	const auto& cAs(bra->cs_[A]);
-	const auto& cBs(ket->cs_[B]);
-	for(int i = 0; i < bra->nums_[A]; i++) {
-	  for(int j = 0; j < ket->nums_[B]; j++) {	    
-	    cumsum += conj(cAs[i]) * cBs[j] * basis->getd(A,B,nAs[i], nBs[j], 0);
-	  }
-	}
-	(*res)(A,B) = cumsum * basis->eAB_(A,B) * basis->hAB_(A,B);
-      }
-    }
-
-  }
-  void calc_matrix(PlaneWaveGto *basis, OpBufBasic *bra, OpBufGausspot *ket, MatrixXcd *res) {
-    auto opV = ket->op_;
-    for(int A = 0; A < basis->size(); A++) {
-      for(int B = 0; B < basis->size(); B++) {
-	const auto& nAs(bra->ns_[A]);
-	const auto& cAs(bra->cs_[A]);
-	int nB = basis->ns_[B];
-	complex<double> cB = basis->Ns_[B];
-
-	int max_nA_nB = nAs.maxCoeff() + nB;
-	VectorXcd intg(max_nA_nB+1);
-	dwn_gaussint_shift(max_nA_nB, opV->b_, basis->gAB_(A,B), basis->RAB_(A,B), &intg);
-	
-	complex<double> cumsum(0.0);
-	for(int i = 0; i < bra->nums_[A]; i++) {
-	  int nA = nAs[i];
-	  complex<double> cumsum1(0.0);
-	  for(int N = 0; N <= max_nA_nB; N++)
-	    cumsum1 += basis->getd(A,B,nA,nB,N) * intg(N);
-	  cumsum += cumsum1 * conj(cAs[i]) * cB;
-	}
-	(*res)(A,B) = cumsum * basis->eAB_(A,B) * opV->v0_;
-      }
-    }
-  }
-  void calc_at(PlaneWaveGto *basis, OpBufBasic *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
-    complex<double> ii(0.0, 1.0);
-    for (int ix = 0; ix < xs.size(); ix++) {
-      complex<double> cumsum(0.0);      
-      for (int A = 0; A < basis->size(); A++) {
-	double d = xs[ix] - basis->Rs_[A];
-	complex<double> cumsum1(0.0);
-	for(int i = 0; i < op->nums_[A]; i++) {
-	  cumsum1 += op->cs_[A][i] * pow(d, op->ns_[A][i]) * exp(-basis->gs_[A]*d*d - ii*basis->Ps_[A]*d);
-	}
-	cumsum += cs[A]*cumsum1;
-      }
-      (*res)(ix) = cumsum;
-    }    
-  }
-  */
-  
   bool is_buf_basic(Operator *op){
     const type_info& op_type = typeid(op);
     if(op_type == typeid(OperatorId) ||
@@ -144,6 +83,9 @@ namespace qpbranch {
     }
     
   }
+  void PlaneWaveGto::con() const {
+    
+  }
   void PlaneWaveGto::matrix(Operator *opbra, Operator *opket, MatrixXcd *res) {
     /* compute overlap matrix. */
 
@@ -183,17 +125,5 @@ namespace qpbranch {
     */
   }
 
-
-  /*
-  class MatrixDispatcher {
-  private:
-    typedef tuple<type_info, type_info, type_info> TTI;
-    map<TTI, void (func*)(OpBuf*, OpBuf*, MatrixXcd*)
-  public:
-    MatrixDispatcher() {
-      
-    }
-  };
-  */
 }
 

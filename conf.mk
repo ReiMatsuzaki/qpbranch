@@ -4,8 +4,8 @@
 # -- option --
 # release or debug
 buildtype:=debug
-# unit test name
-utest:=pwgto
+# unit test or calculation name
+target:=pwgto
 
 # -- Directories --
 SRC:=${QPBRANCH_ROOT}/src
@@ -13,6 +13,7 @@ BUILD:=${QPBRANCH_ROOT}/build/${buildtype}
 OBJ:=${BUILD}/obj
 LIB:=${BUILD}/lib
 BIN:=${BUILD}/bin
+CALC:=${QPBRANCH_ROOT}/calc
 INCLUDE:=${QPBRANCH_ROOT}/include
 EXTERNAL:=${QPBRANCH_ROOT}/external
 TEST:=${QPBRANCH_ROOT}/test
@@ -67,19 +68,23 @@ ${OBJ}/json11.o: ${JSON11}/json11.cpp
 	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c -o $@ $<
 
-OBJS=$(addprefix ${OBJ}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
+SRCS:=$(wildcard ${SRC}/*.cpp) ${JSON11}/json11.cpp
+#OBJS=$(addprefix ${OBJ}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
+OBJS:=$(addprefix ${OBJ}/, $(patsubst %.cpp,%.o,$(notdir ${SRCS})))
 ${LIB}/libqpbranch.a: ${OBJS}
 	@[ -d ${LIB} ] || mkdir -p ${LIB}
 	${AR} ${ARFLAGS} $@ $^
 
 # -- command --
-.PHONY: clean_all check
+.PHONY: check calc clean_all clean_part
 
 check:
-	cd ${TEST}/${utest}; make all
+	cd ${TEST}/${target}; make all
+calc:
+	cd ${CALC}/${target}; make all
 
 clean_all:
-	${RM} -r ${QPBRANCH_ROOT}/build
+	${RM} -r ${QPBRANCH_ROOT}/build/
 
 clean_part:
 	${RM} -r ${BUILD}
