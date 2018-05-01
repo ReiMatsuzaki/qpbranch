@@ -52,7 +52,7 @@ namespace qpbranch {
       ops_opt_.push_back(Dgi_);
     }
     
-    basis_ = new PlaneWaveGto(ns, ops);
+    basis_ = new Pwgto(ns, ops);
     
   }
   void DySetPoly::setup() {

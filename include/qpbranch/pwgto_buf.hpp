@@ -14,7 +14,7 @@ namespace qpbranch {
     
   class OpBufBasic;
 
-  class PlaneWaveGto;
+  class Pwgto;
   class Pwgto1c;
   
   class OpBufGausspot;
@@ -23,11 +23,11 @@ namespace qpbranch {
   class OpBuf {
   public:
     virtual int maxn(int A) = 0;
-    virtual void setup(PlaneWaveGto *basis) = 0;
-    virtual void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res) = 0;
-    virtual void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
+    virtual void setup(Pwgto *basis) = 0;
+    virtual void matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
     virtual void setup(Pwgto1c *basis) = 0;
     virtual void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) = 0;
     virtual void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
@@ -45,11 +45,11 @@ namespace qpbranch {
     OpBufBasic(int num);
     int maxn(int A);
     void init_zero(int A, int num);    
-    virtual void setup(PlaneWaveGto *basis) = 0;
-    void matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    virtual void setup(Pwgto *basis) = 0;
+    void matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
+    void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
     virtual void setup(Pwgto1c *basis) = 0;
     void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
     void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
@@ -59,28 +59,28 @@ namespace qpbranch {
   class OpBufId : public OpBufBasic {
   public:
     OpBufId(const VectorXi& ns);
-    void setup(PlaneWaveGto *basis);
+    void setup(Pwgto *basis);
     void setup(Pwgto1c *basis);
   };
   class OpBufRn : public OpBufBasic {
   public:
     int n_;
     OpBufRn(const VectorXi& ns, int n);
-    void setup(PlaneWaveGto *basis);
+    void setup(Pwgto *basis);
     void setup(Pwgto1c *basis);
   };
   class OpBufPn : public OpBufBasic {
   public:
     int n_;
     OpBufPn(const VectorXi& ns, int n);
-    void setup(PlaneWaveGto *basis);
+    void setup(Pwgto *basis);
     void setup(Pwgto1c *basis);
   };
   class OpBufDa : public OpBufBasic {
   public:
     int id_;
     OpBufDa(const VectorXi& ns, int id);
-    void setup(PlaneWaveGto *basis);
+    void setup(Pwgto *basis);
     void setup(Pwgto1c *basis);
   };
   class OpBufGausspot : public OpBuf {
@@ -91,11 +91,11 @@ namespace qpbranch {
     OpBufGausspot(const VectorXi& ns, OperatorGausspot *op);
     
     int maxn(int A);
-    void setup(PlaneWaveGto *basis);
-    void matrix(OpBuf *opbrat, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, PlaneWaveGto *basis, MatrixXcd *res);
-    void at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    void setup(Pwgto *basis);
+    void matrix(OpBuf *opbrat, Pwgto *basis, MatrixXcd *res);
+    void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
+    void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
+    void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
     void setup(Pwgto1c *basis);
     void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
     void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);

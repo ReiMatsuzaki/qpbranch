@@ -121,10 +121,10 @@ namespace qpbranch {
     ns_[A] = VectorXi::Zero(num);
     cs_[A] = VectorXcd::Zero(num);
   }
-  void OpBufBasic::matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
     opbra->matrix(this, basis, res);
   }
-  void OpBufBasic::matrix(OpBufBasic *ket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBufBasic *ket, Pwgto *basis, MatrixXcd *res) {
     
     for(int A = 0; A < basis->num_; A++) {
       for(int B = 0; B < basis->num_; B++) {	
@@ -143,7 +143,7 @@ namespace qpbranch {
     }
 
   }
-  void OpBufBasic::matrix(OpBufGausspot *ket, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufBasic::matrix(OpBufGausspot *ket, Pwgto *basis, MatrixXcd *res) {
     
     auto opV = ket->op_;
     for(int A = 0; A < basis->num_; A++) {
@@ -169,7 +169,7 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufBasic::at(PlaneWaveGto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+  void OpBufBasic::at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     complex<double> ii(0.0, 1.0);
     for (int ix = 0; ix < xs.size(); ix++) {
       complex<double> cumsum(0.0);      
@@ -253,7 +253,7 @@ namespace qpbranch {
       this->ns_[A][0] = ns[A];
     }
   }
-  void OpBufId::setup(PlaneWaveGto *basis) {
+  void OpBufId::setup(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns_[A];
       cs_[A][0] = basis->Ns_[A];
@@ -271,7 +271,7 @@ namespace qpbranch {
       this->ns_[A][0] = ns[A] + n;
     }
   }
-  void OpBufRn::setup(PlaneWaveGto *basis) {
+  void OpBufRn::setup(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns_[A] + n_;
       cs_[A][0] = basis->Ns_[A];
@@ -323,7 +323,7 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufPn::setup(PlaneWaveGto *basis) {
+  void OpBufPn::setup(Pwgto *basis) {
     complex<double> ii(0.0, 1.0);
     for(int A = 0; A < num_; A++) {
       int nA = basis->ns_[A];      
@@ -425,7 +425,7 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufDa::setup(PlaneWaveGto *basis) {
+  void OpBufDa::setup(Pwgto *basis) {
     complex<double> ii(0, 1);
     for(int A = 0; A < basis->num_; A++) {
       int nA = basis->ns_[A];
@@ -503,15 +503,15 @@ namespace qpbranch {
   OpBufGausspot::OpBufGausspot(const VectorXi& ns, OperatorGausspot *op) : num_(ns_.size()),
 									   ns_(ns), op_(op) {}  
   int OpBufGausspot::maxn(int A) { return ns_(A); }
-  void OpBufGausspot::setup(PlaneWaveGto*) {}
-  void OpBufGausspot::matrix(OpBuf *opbra, PlaneWaveGto *basis, MatrixXcd *res) {
+  void OpBufGausspot::setup(Pwgto*) {}
+  void OpBufGausspot::matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
     opbra->matrix(this, basis, res);
   }
-  void OpBufGausspot::matrix(OpBufBasic *, PlaneWaveGto *, MatrixXcd *) {
+  void OpBufGausspot::matrix(OpBufBasic *, Pwgto *, MatrixXcd *) {
     assert(false&&"not impl");
   }
-  void OpBufGausspot::matrix(OpBufGausspot *, PlaneWaveGto *, MatrixXcd *) {}
-  void OpBufGausspot::at(PlaneWaveGto*, const VectorXcd&, const VectorXd&, VectorXcd *) {
+  void OpBufGausspot::matrix(OpBufGausspot *, Pwgto *, MatrixXcd *) {}
+  void OpBufGausspot::at(Pwgto*, const VectorXcd&, const VectorXd&, VectorXcd *) {
     throw runtime_error("not impl");
   }
   void OpBufGausspot::setup(Pwgto1c *) {}

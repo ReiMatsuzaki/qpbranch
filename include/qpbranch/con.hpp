@@ -32,11 +32,12 @@ namespace mangan4 {
     void close();
     bool has(string key, int num) const;
 
-    void write(string key, int num, bool val);
-    void write(string key, int num, double val);
-    void write(string key, int num, const VectorXi& val);
-    void write(string key, int num, const MatrixXi& val);
-    void write(string key, int num, const VectorXd& val);
-    void write(string key, int num, const MatrixXd& val);
+    void write_l(string key, int num, bool val);
+    void write_i(string key, int num, int val);
+    void write_f(string key, int num, double val);
+    void write_i1(string key, int num, const VectorXi& val);
+    void write_i2(string key, int num, const MatrixXi& val);
+    void write_f1(string key, int num, const VectorXd& val);
+    void write_f2(string key, int num, const MatrixXd& val);
   };
 }

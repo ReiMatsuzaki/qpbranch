@@ -13,7 +13,6 @@ using namespace qpbranch;
 using namespace boost;
 using namespace json11;
 
-/*
 TEST(utest_pwgto, test_coef_d) {
   complex<double> gAB(1, 0.2);
   complex<double> wAB(1.2, 0);
@@ -34,7 +33,6 @@ TEST(utest_pwgto, test_coef_d) {
   }
 
 }
-*/
 TEST(utest_pwgto, overlap) {
 
   int num = 4;
@@ -43,7 +41,7 @@ TEST(utest_pwgto, overlap) {
   Operator *op_id = &opop_id;
   
   vector<Operator*> ops = {op_id};
-  auto *basis = new PlaneWaveGto(ns, ops);
+  auto *basis = new Pwgto(ns, ops);
   basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
   basis->Rs_ << 0.0, 0.0, 0.2, 0.2;
   basis->Ps_ << 0.0, 0.0, 0.5, 0.5;
@@ -75,7 +73,6 @@ TEST(utest_pwgto, overlap) {
   ASSERT_DOUBLE_EQ(imag(ref), imag(calc)) << "A:" << A << endl << "B:" << B << endl;
   
 }
-/*
 TEST(utest_pwgto, multipole) {
 
   int num = 5;
@@ -84,7 +81,7 @@ TEST(utest_pwgto, multipole) {
   auto R2 = new OperatorRn(2);
   vector<Operator*> ops = {id, R1, R2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
-  auto *basis = new PlaneWaveGto(ns, ops);
+  auto *basis = new Pwgto(ns, ops);
   basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
   basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
   basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
@@ -144,7 +141,7 @@ TEST(utest_pwgto, pn) {
   auto P2 = new OperatorPn(2);
   vector<Operator*> ops = {id, P1, P2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
-  auto *basis = new PlaneWaveGto(ns, ops);
+  auto *basis = new Pwgto(ns, ops);
   basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
   basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
   basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
@@ -189,7 +186,7 @@ TEST(utest_pwgto, test_harmonic) {
   auto opR2 = new OperatorRn(2);
   auto opP2 = new OperatorPn(2);  
   vector<Operator*> ops = {opid, opR2, opP2};
-  auto *basis = new PlaneWaveGto(ns, ops);
+  auto *basis = new Pwgto(ns, ops);
 
   complex<double> g = m*w/2;
   basis->gs_ = VectorXcd::Ones(num)*g;
@@ -232,29 +229,26 @@ TEST(utest_pwgto, test_gausspot) {
   auto opdR = new OperatorDa(kIdDR);
   auto opV  = new OperatorGausspot(v0, b, q0);
   vector<Operator*> ops = {opid, opdR, opV};
-  auto *basis = new PlaneWaveGto(ns, ops);
-  basis->gs_ << 100.0;
+  auto *basis = new Pwgto(ns, ops);
+  basis->gs_ << 1000.0;
   basis->Rs_ << 0.3;
   basis->setup();
   
   MatrixXcd V(num,num);
   basis->matrix(opid, opV, &V);
   double R0 = basis->Rs_(0);
-  complex<double> ref = v0 * exp(-b*R0*R0);
-  ASSERT_NEAR(real(ref), real(V(0,0)), 3.0*pow(10.0, -3));
+
+  double dR = 0.001;
+  VectorXd Rs(3); Rs << R0, R0-dR, R0+dR;
+  VectorXcd refs(3);
+  opV->at(Rs, &refs);
+  ASSERT_NEAR(real(refs(0)), real(V(0,0)), 3.0*pow(10.0, -3));
 
   basis->matrix(opdR, opV, &V);
-  ref = -2.0*b*R0 *v0* exp(-b*R0*R0);
-  //ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -4));  
-  // from gwpdy/src/utest_pwgto2.f90
-  ref = -0.8252221444;
-  ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -4));
+  complex<double> ref = (refs[2]-refs[1])/(2.0*dR);
+  ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -3));
 
   delete basis;
   
-
-//a:    -0.8326517408E+00    -0.0000000000E+00
-//b:    -0.8252221444E+00     0.0000000000E+00
-  
 }
-*/
+

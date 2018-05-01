@@ -23,7 +23,7 @@ namespace qpbranch {
     // intermediate
     Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
     vector<Operator*> ops_opt_;
-    PlaneWaveGto *basis_;
+    Pwgto *basis_;
     // Main
     DySetPoly(Operator *pot, const VectorXi ns, string type_gauss);
     void setup();

@@ -3,13 +3,13 @@ include ${QPBRANCH_ROOT}/conf.mk
 
 -include ${main.d}
 
-OBJS=$(addprefix ${BUILD}/, libgtest_main.a mathplus.o) main.o
-
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
+main.o: INCLUDE+=${GTEST_INCLUDE}
 main.o: main.cpp
 
 main.x: LIBS+=${GTEST_LIBS}
-main.x: ${OBJS}
+main.x:  ${LIB}/libqpbranch.a ${LIB}/libgtest_main.a main.o
+	${CXX} main.o -o $@ -L${LIB} -lqpbranch -lgtest_main ${LIBS} ${LDFLAGS}
 
 .PHONY: all
 

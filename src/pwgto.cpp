@@ -18,7 +18,7 @@ namespace qpbranch {
     }
   }
 
-  PlaneWaveGto::PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops):
+  Pwgto::Pwgto(const VectorXi& ns, const vector<Operator*>& ops):
     num_(ns.size()), nop_(ops.size()), ns_(ns), ops_(ops),
     gs_(num_), Rs_(num_), Ps_(num_), 
     Ns_(num_), maxn_(num_),
@@ -47,8 +47,8 @@ namespace qpbranch {
     }
     
   }
-  PlaneWaveGto::~PlaneWaveGto() {}
-  void PlaneWaveGto::setup() {
+  Pwgto::~Pwgto() {}
+  void Pwgto::setup() {
 
     // normalization term 
     for(int A = 0; A < num_; A++) {
@@ -83,10 +83,10 @@ namespace qpbranch {
     }
     
   }
-  void PlaneWaveGto::con() const {
+  void Pwgto::con() const {
     
   }
-  void PlaneWaveGto::matrix(Operator *opbra, Operator *opket, MatrixXcd *res) {
+  void Pwgto::matrix(Operator *opbra, Operator *opket, MatrixXcd *res) {
     /* compute overlap matrix. */
 
     assert(res->rows()>=num_);
@@ -111,7 +111,7 @@ namespace qpbranch {
     */
     
   }  
-  void PlaneWaveGto::at(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+  void Pwgto::at(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
 
     buffer_map_[op]->at(this, cs, xs, res);
     

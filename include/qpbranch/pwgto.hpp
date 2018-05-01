@@ -31,7 +31,7 @@ namespace qpbranch {
   // forward declaration
   class OpBuf;
   
-  class PlaneWaveGto : public BasisSet {
+  class Pwgto : public BasisSet {
   public:    
     // data size
     int num_, nop_;
@@ -48,8 +48,8 @@ namespace qpbranch {
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;
     multi_array<multi_array<complex<double>,3>*,2> *d_;
     // Main
-    PlaneWaveGto(const VectorXi& ns, const vector<Operator*>& ops);
-    ~PlaneWaveGto();
+    Pwgto(const VectorXi& ns, const vector<Operator*>& ops);
+    ~Pwgto();
     void setup();
     int size() const { return num_; }
     void matrix(Operator *ibra, Operator *iket, MatrixXcd *res);
