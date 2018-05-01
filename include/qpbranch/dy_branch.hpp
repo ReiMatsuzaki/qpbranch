@@ -21,6 +21,7 @@ namespace qpbranch {
     // options
     string type_gauss_, type_eomslow_;
     // intermediate
+    bool is_setup_;
     Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
     vector<Operator*> ops_opt_;
     Pwgto *basis_;
@@ -34,6 +35,7 @@ namespace qpbranch {
     void calc_H(Operator *op_bra, MatrixXcd *res);
     void calc_eff_H(const VectorXd& dotx, MatrixXcd *res);
     void update_basis();
+    void con(int it);
   };
 
   /*

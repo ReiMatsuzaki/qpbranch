@@ -1,10 +1,13 @@
 #include <qpbranch/pwgto.hpp>
 #include <qpbranch/pwgto_buf.hpp>
 #include <qpbranch/mathplus.hpp>
+#include <qpbranch/con.hpp>
 using namespace std;
 using boost::extents;
 
 namespace qpbranch {
+
+  using namespace mangan4;
   
   bool is_buf_basic(Operator *op){
     const type_info& op_type = typeid(op);
@@ -20,15 +23,17 @@ namespace qpbranch {
 
   Pwgto::Pwgto(const VectorXi& ns, const vector<Operator*>& ops):
     num_(ns.size()), nop_(ops.size()), ns_(ns), ops_(ops),
-    gs_(num_), Rs_(num_), Ps_(num_), 
+    gs_(num_), Rs_(num_), Ps_(num_), is_setup_(false),
     Ns_(num_), maxn_(num_),
     gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_) {
-    
+
+    // allocate buffer for each operator
     for(auto it = ops.begin(); it!=ops.end(); ++it) {
       Operator *op = *it;
       buffer_map_[op] = make_op_buff(ns, op);
     }
-    
+
+    // calculate
     for(int A = 0; A < num_; A++) {
       int maxn(0);
       for(auto it =  buffer_map_.begin(); it != buffer_map_.end(); ++it) {
@@ -38,13 +43,19 @@ namespace qpbranch {
       }
       maxn_[A] = maxn;
     }
-    
+
+    // allocate coefficient d
     d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
     for(int A = 0; A < num_; A++) {
       for(int B = 0; B < num_; B++) {
 	(*d_)[A][B] = new multi_array<complex<double>,3>(extents[maxn_[A]+1][maxn_[B]+1][maxn_[A]+maxn_[B]+1]);
       }
     }
+
+    // initialize variables
+    gs_ = VectorXcd::Constant(num_, complex<double>(1.0, 0.0));
+    Rs_ = VectorXd::Constant( num_, 0.0);
+    Ps_ = VectorXd::Constant( num_, 0.0);
     
   }
   Pwgto::~Pwgto() {}
@@ -81,14 +92,22 @@ namespace qpbranch {
     for(auto it = buffer_map_.begin(); it != buffer_map_.end(); ++it) {
       it->second->setup(this);
     }
+
+    is_setup_ = true;
     
   }
-  void Pwgto::con() const {
-    
+  void Pwgto::con(int it) {
+    assert(is_setup_);
+    Con& con = Con::getInstance();
+    con.write_f1("R", it, Rs_);
+    con.write_f1("P", it, Ps_);
+    con.write_f1("gr", it, gs_.real());
+    con.write_f1("gi", it, gs_.imag());
   }
   void Pwgto::matrix(Operator *opbra, Operator *opket, MatrixXcd *res) {
     /* compute overlap matrix. */
 
+    assert(is_setup_);
     assert(res->rows()>=num_);
     assert(res->cols()>=num_);
     assert(buffer_map_.find(opbra)!=buffer_map_.end());
@@ -113,6 +132,7 @@ namespace qpbranch {
   }  
   void Pwgto::at(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
 
+    assert(is_setup_);
     buffer_map_[op]->at(this, cs, xs, res);
     
     /*

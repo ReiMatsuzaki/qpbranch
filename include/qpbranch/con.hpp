@@ -31,7 +31,6 @@ namespace mangan4 {
     void open(string key, int num, char mode);
     void close();
     bool has(string key, int num) const;
-
     void write_l(string key, int num, bool val);
     void write_i(string key, int num, int val);
     void write_f(string key, int num, double val);

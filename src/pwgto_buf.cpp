@@ -30,7 +30,7 @@ namespace qpbranch {
     }
   }
 
-  double calc_nterm(int nd, int nA, double gA) {
+  double calc_nterm(int nd, int nA, double gAr) {
     /*
       give difference of normalization term
        (d/d(Re[g]))^(nd)N(t)
@@ -42,8 +42,22 @@ namespace qpbranch {
      So, normalization term N becomes
        N = (2Re[g])^{n/2+1/4} Sqrt(1/Gamma[n+1/2])
     */
-    assert(false||"not impl");
-    return 0.0*nd*nA*gA;
+
+    VectorXd gint(nA+1);
+    gammaint_nhalf(nA, &gint);
+
+    double nn = nA*0.5+0.25;
+    double c = pow(2.0, nn) * sqrt(1/gint[nA]);
+    switch(nd) {
+    case 0:
+      return pow(gAr, nn) * c;
+      break;
+    case 1:
+      return pow(gAr, nn-1) * nn * c;
+      break;
+    default:
+      throw runtime_error("unsupported nd");
+    }
   }
 
   void hermite_coef_d(complex<double> gAB, complex<double> wAB, double RA, double RB,
@@ -404,6 +418,8 @@ namespace qpbranch {
 	  ns_[A][1] = nA;
 	} else {
 	  this->init_zero(A, 3);
+	  ns_[A][0] = nA+1;
+	  ns_[A][1] = nA;
 	  ns_[A][2] = nA-1;
 	}
 	break;
@@ -440,7 +456,7 @@ namespace qpbranch {
 	cs_[A][1] = (-NA) * (ii*pA);
 	if(nA>0) {
 	  ns_[A][2] = nA-1;
-	  cs_[A][1] = (-NA) * (1.0*nA);
+	  cs_[A][2] = (-NA) * (1.0*nA);
 	}
 	break;
       case kIdDP:

@@ -28,7 +28,7 @@ namespace qpbranch {
     }
     
   }
-  void gammaint_nhalf(int maxn, VectorXcd *res) {
+  void gammaint_nhalf(int maxn, VectorXd *res) {
     /*
       gives {Gamma(n+1/2) | n = 0,...,maxn}
     */

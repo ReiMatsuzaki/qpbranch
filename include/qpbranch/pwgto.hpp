@@ -42,6 +42,7 @@ namespace qpbranch {
     VectorXcd gs_;
     VectorXd Rs_, Ps_;    
     // intermediate
+    bool is_setup_;
     map<Operator*, OpBuf*> buffer_map_;
     VectorXd Ns_;
     VectorXi maxn_;
@@ -57,7 +58,7 @@ namespace qpbranch {
     inline complex<double> getd(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }
-    void con() const;
+    void con(int it);
   };
   
 }

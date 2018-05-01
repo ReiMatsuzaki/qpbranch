@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <gtest/gtest.h>
-#include <json11.hpp>
 
 #include <qpbranch/mathplus.hpp>
 #include <qpbranch/eigenplus.hpp>
@@ -11,7 +10,6 @@
 using namespace std;
 using namespace qpbranch;
 using namespace boost;
-using namespace json11;
 
 TEST(utest_pwgto, test_coef_d) {
   complex<double> gAB(1, 0.2);
@@ -37,8 +35,9 @@ TEST(utest_pwgto, overlap) {
 
   int num = 4;
   VectorXi ns(num); ns << 0, 0, 2, 2;
-  OperatorId opop_id;
-  Operator *op_id = &opop_id;
+  //  OperatorId opopid;  
+  //  auto *op_id = &opopid;
+  auto *op_id = new OperatorId();
   
   vector<Operator*> ops = {op_id};
   auto *basis = new Pwgto(ns, ops);
@@ -130,10 +129,6 @@ TEST(utest_pwgto, multipole) {
   
 }
 TEST(utest_pwgto, pn) {
-
-  const string str0 = R"("k1":"v1")";
-  string err;
-  auto json = Json::parse(str0, err);
   
   int num = 5;
   auto id = new OperatorId();
@@ -172,6 +167,67 @@ TEST(utest_pwgto, pn) {
   }
 
   delete basis;
+}
+TEST(utest_pwgto, da) {
+
+  int num = 4;
+  
+  complex<double> b(1.3);
+  complex<double> v0(1.2);
+  complex<double> q0(0.0);    
+
+  double dx = 0.01;
+  double R0 = 0.1;
+  double R1 = 0.2;
+  double P0 = 0.3;
+  double P1 = 0.2;
+  complex<double> g0 = complex<double>(1.0, 0.1);
+  complex<double> g1 = complex<double>(1.3, 0.15);
+  
+  for(int n = 0; n < 2; n++) {
+    VectorXi ns = VectorXi::Constant(num, n);
+    vector<int> ops_id = {kIdDR, kIdDP, kIdDgr, kIdDgi};  
+    for(auto it = ops_id.begin(); it!=ops_id.end(); ++it) {
+      
+      int kId = *it;
+      auto op_id = new OperatorId();
+      auto op_da = new OperatorDa(kId);
+      auto op_pot = new OperatorGausspot(v0, b, q0);
+      vector<Operator*> ops = {op_id, op_da, op_pot};
+      
+      auto *basis = new Pwgto(ns, ops);
+      basis->Rs_ << R0, R0, R0, R1;
+      basis->Ps_ << P0, P0, P0, P1;
+      basis->gs_ << g0, g0, g0, g1;
+      if(kId==kIdDR) {
+	basis->Rs_(1) += dx;
+	basis->Rs_(2) -= dx;
+      } else if(kId==kIdDP) {
+	basis->Ps_(1) += dx;
+	basis->Ps_(2) -= dx;
+      } else if(kId==kIdDgr) {
+	basis->gs_(1) += complex<double>(dx, 0.0);
+	basis->gs_(2) -= complex<double>(dx, 0.0);
+      } else if(kId==kIdDgi) {
+	basis->gs_(1) += complex<double>(0.0, dx);
+	basis->gs_(2) -= complex<double>(0.0, dx);
+      }
+      basis->setup();
+      
+      MatrixXcd M1(num,num), M2(num,num);
+      basis->matrix(op_id,  op_da, &M1);
+      basis->matrix(op_id,  op_id, &M2);
+      EXPECT_NEAR(M1(3, 0).real(), ((M2(3,1)-M2(3,2))/(2*dx)).real(), dx*dx) <<
+	"kId:" << kId << endl <<
+	"n  :" << n   << endl;
+      
+      basis->matrix(op_da, op_pot, &M1);
+      basis->matrix(op_id, op_pot, &M2);
+      EXPECT_NEAR(M1(0, 3).real(), ((M2(1,3)-M2(2,3))/(2*dx)).real(), dx*dx) <<
+	"kId:" << kId << endl <<
+	"n  :" << n   << endl;
+    }
+  }
 }
 TEST(utest_pwgto, test_harmonic) {
 
