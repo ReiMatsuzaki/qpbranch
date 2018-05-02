@@ -6,8 +6,8 @@ using namespace std;
 namespace qpbranch {
 
   Pwgto1c::Pwgto1c(const VectorXi& ns, double R0, double P0,
-		   complex<double> g0, const vector<Operator*>& ops) :
-    num_(ns.size()), nop_(ops.size()), ns_(ns), ops_(ops), R0_(R0), P0_(P0), g0_(g0) {
+		   complex<double> g0, const vector<Operator*>& ops):
+    num_(ns.size()), nop_(ops.size()), ns_(ns), ops_(ops), R0_(R0), P0_(P0), g0_(g0), Ns_(num_) {
 
     for(auto it = ops.begin(); it != ops.end(); ++it) {
       auto op = *it;
@@ -46,9 +46,14 @@ namespace qpbranch {
     assert(res->cols()>=num_);
     assert(buf_map_.find(opbra)!=buf_map_.end());
     assert(buf_map_.find(opket)!=buf_map_.end());
+    
     buf_map_[opket]->Matrix(buf_map_[opbra], this, res);
   }
   void Pwgto1c::At(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
-    buf_map_[op]->At(this, cs, xs, res);    
+    assert(buf_map_.find(op)!=buf_map_.end());
+    assert(cs.size()==num_);
+    assert(xs.size()==res->size());
+    
+    buf_map_[op]->At(this, cs, xs, res);
   }  
 }

@@ -19,7 +19,7 @@ namespace qpbranch {
   void IntGtoShift(int maxN, complex<double> a, complex<double> b, complex<double> w,
 		   VectorXcd *res);
   // Give an array of derivative of gauss function integration
-  //       { (d/dw)^N Int_{-oo}^{+oo} Exp[-a(q-w)^2 - b q^2]  | N = 0, maxN }
+  //       { (d/dw)^N Int_{-oo}^{+oo} Exp[-a(q-w)^2 - b q^2]  | N = 0,...,maxN }
   void DwIntGauss(int maxN, complex<double> a, complex<double> b, complex<double> w,
 		  VectorXcd *ptr_res);
 }

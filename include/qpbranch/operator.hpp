@@ -6,44 +6,44 @@
 
 namespace qpbranch {
 
+  using std::string;
   using std::complex;
   using Eigen::VectorXd;
   using Eigen::VectorXcd;
   
   class Operator {
   public:
-    virtual std::string str() const = 0;
+    virtual string str() const = 0;
   };
   class OperatorId : public Operator {
   public:
-    std::string str() const { return "id"; }
+    string str() const { return "id"; }
   };
   class OperatorRn : public Operator {
     int n_;
   public:
     OperatorRn(int n) : n_(n) {}
     inline int n() const { return n_; }
-    std::string str() const { return "Rn"; }
+    string str() const { return "Rn"; }
   };
   class OperatorPn : public Operator {
     int n_;
   public:
     OperatorPn(int n) : n_(n) {}
     inline int n() const { return n_; }
-    std::string str() const { return "Pn"; }
+    string str() const { return "Pn"; }
   };
   class OperatorDa : public Operator {
     int id_; // id for variable.
   public:
     OperatorDa(int id) : id_(id) {}
     inline int id() const { return id_; }
-    std::string str() const { return "Da"; }
+    string str() const;
   };
   class OperatorPot : public Operator {
   public:
     virtual void At(const VectorXd& xs, VectorXcd *res) = 0;
-    //    void at0(double x, complex<double> *res);
-    virtual std::string str() const = 0;
+    virtual string str() const = 0;
   };
   class OperatorGausspot : public OperatorPot {
     complex<double> v0_, b_, q0_;
@@ -54,7 +54,7 @@ namespace qpbranch {
     OperatorGausspot(complex<double> v0, complex<double> b, complex<double> q0):
       v0_(v0), b_(b), q0_(q0) {}
     void At(const VectorXd& xs, VectorXcd *res);
-    std::string str() const { return "Gausspot"; }
+    string str() const;
   };
 
 }

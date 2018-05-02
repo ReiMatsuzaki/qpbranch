@@ -28,7 +28,7 @@ DEPS:=${SRCS:%.cpp=${OBJ}/%.d}
 
 # -- options --
 CXX=c++
-CXXFLAGS=-MMD -MP -MF $(@:%.o=%.d)
+CXXFLAGS=-std=c++11 -MMD -MP -MF $(@:%.o=%.d)
 CPPFLAGS+=-I${INCLUDE} -I${EIGEN} -I${JSON11}
 
 ifeq (${buildtype},release)

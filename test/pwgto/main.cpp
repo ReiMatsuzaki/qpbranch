@@ -5,7 +5,7 @@
 #include <qpbranch/mathplus.hpp>
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/pwgto.hpp>
-#include <qpbranch/pwgto_buf.hpp>
+#include <qpbranch/pwgto1c.hpp>
 
 using namespace std;
 using namespace qpbranch;
@@ -307,4 +307,84 @@ TEST(utest_pwgto, test_gausspot) {
   delete basis;
   
 }
+TEST(utest_pwgto, one_center) {
 
+  int num = 3;
+  VectorXi ns(num); ns << 0, 1, 2;
+  
+  complex<double> b(1.3);
+  complex<double> v0(1.2);
+  complex<double> q0(0.0);
+  auto opid = new OperatorId();
+  auto opR1 = new OperatorRn(1);
+  auto opR2 = new OperatorRn(2);
+  auto opP1 = new OperatorPn(1);
+  auto opP2 = new OperatorPn(2);
+  auto opDR = new OperatorDa(kIdDR);
+  auto opDP = new OperatorDa(kIdDP);
+  auto opDgr= new OperatorDa(kIdDgr);
+  auto opDgi= new OperatorDa(kIdDgi);  
+  auto opV  = new OperatorGausspot(v0, b, q0);
+  vector<Operator*> ops = {opid, opR1, opR2, opP1, opP2, opDR, opDP, opDgr, opDgi, opV};
+
+  double R0 = 0.1;
+  double P0 = 2.0;
+  complex<double> g0(1.0,0.2);
+  
+  auto *pwgto   = new Pwgto(ns, ops);
+  pwgto->ref_Rs() = VectorXd::Constant( num, R0);
+  pwgto->ref_Ps() = VectorXd::Constant( num, P0);
+  pwgto->ref_gs() = VectorXcd::Constant(num, g0);
+  pwgto->SetUp();
+  
+  auto *pwgto1c = new Pwgto1c(  ns, R0, P0, g0, ops);
+  pwgto1c->SetUp();
+
+  double tol = pow(10.0, -12.0);
+
+  MatrixXcd X(num,num);
+  MatrixXcd Y(num,num);
+  for(auto op1 : ops) {
+    for(auto op2 : ops) {
+      if(op1==opV)
+	continue;
+      pwgto->Matrix(op1, op2, &X);
+      pwgto1c->Matrix(op1, op2, &Y);
+      for(int A = 0; A < num; A++) {
+	for(int B = 0; B < num; B++) {
+	  ASSERT_NEAR(X(A,B).real(), Y(A,B).real(), tol) <<
+	    "op1:" << op1->str() << endl <<
+	    "op2:" << op2->str() << endl <<
+	    " A :" << A << endl <<
+	    " B :" << B << endl;
+	  ASSERT_NEAR(X(A,B).imag(), Y(A,B).imag(), tol) <<
+	    "op1:" << op1->str() << endl <<
+	    "op2:" << op2->str() << endl <<
+	    " A :" << A << endl <<
+	    " B :" << B << endl;
+	}
+      }
+    }
+  }
+
+  int nx = 2;
+  VectorXd  xs(nx); xs << 0.1, 0.2;
+  VectorXcd y1s(nx);
+  VectorXcd y2s(nx);
+  VectorXcd cs(num); cs << 0.5, complex<double>(0.4, 0.1), 0.2;
+  for(auto op : ops) {
+    if(op==opV)
+      continue;
+    pwgto->At(  op, cs, xs, &y1s);
+    pwgto1c->At(op, cs, xs, &y2s);
+    for(int i = 0; i < nx; i++) {
+      ASSERT_DOUBLE_EQ(y1s(i).real(), y2s(i).real()) <<
+	"op:" << op->str() << endl <<
+	" i :"   << i << endl;
+      ASSERT_DOUBLE_EQ(y1s(i).imag(), y2s(i).imag()) <<
+	"op:" << op->str() << endl <<
+	" i :"   << i << endl;
+    }
+  }
+  
+}

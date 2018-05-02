@@ -167,14 +167,26 @@ namespace qpbranch {
 	int nB = basis->ns_[B];
 	complex<double> cB = basis->Ns_[B];
 	int max_nA_nB = nAs.maxCoeff() + nB;
+
 	VectorXcd intg(max_nA_nB+1);
-	DwIntGauss(max_nA_nB, opV->b(), gg, dq, &intg);	
+	IntGtoShift(max_nA_nB, gg, opV->b(), dq, &intg);
 	complex<double> cumsum(0); 
 	for(int i = 0; i < this->nums_[A]; i++) {
 	  int nA = nAs[i];
-	  cumsum += conj(cAs[i]) * cB * intg(nA);
+	  cumsum += conj(cAs[i]) * cB * intg(nA+nB);
 	}
-	(*res)(A,B) = cumsum;
+
+	
+	/*
+	VectorXcd intg(max_nA_nB+1);	
+	DwIntGauss(max_nA_nB, gg, opV->b(), dq, &intg);	
+	complex<double> cumsum(0); 
+	for(int i = 0; i < this->nums_[A]; i++) {
+	  int nA = nAs[i];
+	  cumsum += conj(cAs[i]) * cB * intg(nA+nB);
+	}
+	*/
+	(*res)(A,B) = cumsum * opV->v0();
       }
     }
   }
@@ -427,7 +439,7 @@ namespace qpbranch {
 	cs_[A][1] = (-NA) * (ii*pA);
 	if(nA>0) {
 	  ns_[A][2] = nA-1;
-	  cs_[A][1] = (-NA) * (1.0*nA);
+	  cs_[A][2] = (-NA) * (1.0*nA);
 	}
 	break;
       case kIdDP:
