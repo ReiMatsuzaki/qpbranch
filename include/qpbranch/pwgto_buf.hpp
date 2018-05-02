@@ -19,95 +19,106 @@ namespace qpbranch {
   
   class OpBufGausspot;
 
-  // Buffer for each operator applying PlaneWaveGto.
+  // factory function for buffer
+  OpBuf* MakeOpBuf(const VectorXi& ns, Operator *op);
+
+  // Buffer for each operator applying Pwgto or Pwgto1c.
   class OpBuf {
   public:
-    virtual int maxn(int A) = 0;
-    virtual void setup(Pwgto *basis) = 0;
-    virtual void matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res) = 0;
-    virtual void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
-    virtual void setup(Pwgto1c *basis) = 0;
-    virtual void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
-    virtual void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
-    virtual void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
+    virtual int Maxn(int A) = 0;
+    virtual void SetUp(Pwgto *basis) = 0;
+    virtual void Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void Matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res) = 0;
+    virtual void At(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
+    virtual void SetUp(Pwgto1c *basis) = 0;
+    virtual void Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void Matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void Matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res) = 0;
+    virtual void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
   };
   // Buffer for basic case. op.phi_A can be represented by polynomial times gauss function
   //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA)) 
   class OpBufBasic : public OpBuf {
-  public:
+  protected:
     int num_;
     vector<int> nums_;
     vector<VectorXi> ns_;   // ns_[A][i]
     vector<VectorXcd> cs_;  // cs_[A][i]
-    OpBufBasic(int num);
-    int maxn(int A);
-    void init_zero(int A, int num);    
-    virtual void setup(Pwgto *basis) = 0;
-    void matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
-    void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-    virtual void setup(Pwgto1c *basis) = 0;
-    void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
-    void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+  public:    
+    OpBufBasic(int num) : num_(num), nums_(num), ns_(num_), cs_(num_){}
+    int num() const { return num_; }
+    const vector<VectorXi>& ns() const { return ns_; }
+    const vector<VectorXcd>& cs() const { return cs_; }
+    int Maxn(int A);
+    void InitZero(int A, int num);    
+    virtual void SetUp(Pwgto *basis) = 0;
+    void Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res);
+    void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
+    void Matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
+    void At(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    virtual void SetUp(Pwgto1c *basis) = 0;
+    void Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
+    void Matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
+    void Matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
+    void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
+  // Buffer for id operator
   class OpBufId : public OpBufBasic {
   public:
     OpBufId(const VectorXi& ns);
-    void setup(Pwgto *basis);
-    void setup(Pwgto1c *basis);
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
   };
+  // Buffer for Rn operator
   class OpBufRn : public OpBufBasic {
-  public:
     int n_;
+  public:    
     OpBufRn(const VectorXi& ns, int n);
-    void setup(Pwgto *basis);
-    void setup(Pwgto1c *basis);
+    int n() const { return n_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
   };
+  // Buffer for Pn operator
   class OpBufPn : public OpBufBasic {
-  public:
     int n_;
+  public:    
     OpBufPn(const VectorXi& ns, int n);
-    void setup(Pwgto *basis);
-    void setup(Pwgto1c *basis);
+    int n() const { return n_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
   };
+  // Buffer for Da operator
   class OpBufDa : public OpBufBasic {
-  public:
     int id_;
+  public:    
     OpBufDa(const VectorXi& ns, int id);
-    void setup(Pwgto *basis);
-    void setup(Pwgto1c *basis);
+    int id() const { return id_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
   };
+  // Buffer for Gaussian potential operator
   class OpBufGausspot : public OpBuf {
-  public:
     int num_;
     VectorXi ns_;    
     OperatorGausspot *op_;
+  public:    
     OpBufGausspot(const VectorXi& ns, OperatorGausspot *op);
-    
-    int maxn(int A);
-    void setup(Pwgto *basis);
-    void matrix(OpBuf *opbrat, Pwgto *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
-    void at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-    void setup(Pwgto1c *basis);
-    void matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
-    void matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
-    void matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
-    void at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-  };
-
-  OpBuf* make_op_buff(const VectorXi& ns, Operator *op);
-  
-  // factory function for OpBuf
-  //  OpBuf* make_op_buff(PlaneWaveGto *basis, Operator *op);
-  
+    int num() const { return num_; }
+    const VectorXi& ns() const { return ns_; }
+    OperatorGausspot *op() const { return op_; }
+    int Maxn(int A);
+    void SetUp(Pwgto *basis);
+    void Matrix(OpBuf *opbrat, Pwgto *basis, MatrixXcd *res);
+    void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
+    void Matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res);
+    void At(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+    void SetUp(Pwgto1c *basis);
+    void Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res);
+    void Matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
+    void Matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
+    void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+  };    
 }
 
 #endif

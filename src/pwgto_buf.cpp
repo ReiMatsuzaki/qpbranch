@@ -8,7 +8,7 @@ using namespace std;
 
 namespace qpbranch {
 
-  OpBuf* make_op_buff(const VectorXi& ns, Operator *op) {
+  OpBuf* MakeOpBuf(const VectorXi& ns, Operator *op) {
     const type_info& optype = typeid(*op);
     if(optype == typeid(OperatorId)) {
       return new OpBufId(ns);
@@ -29,22 +29,21 @@ namespace qpbranch {
       abort();
     }
   }
-
-  double calc_nterm(int nd, int nA, double gAr) {
-    /*
-      give difference of normalization term
-       (d/d(Re[g]))^(nd)N(t)
-     where
-       N(t) = 1/sqrt(S)
-       S = Int_{-oo}^{+oo} x^{2n} exp[-2Re[g]x^2] dx.
-    overlap S can be expressed by Gamma function
-       S = (2Re[g])^{-n-1/2} Gamma[n+1/2]
-     So, normalization term N becomes
-       N = (2Re[g])^{n/2+1/4} Sqrt(1/Gamma[n+1/2])
-    */
+  
+  
+  // give difference of normalization term
+  //     (d/d(Re[g]))^(nd)N(t)
+  // where
+  //     N(t) = 1/sqrt(S)
+  //     S = Int_{-oo}^{+oo} x^{2n} exp[-2Re[g]x^2] dx.
+  // overlap S can be expressed by Gamma function
+  //     S = (2Re[g])^{-n-1/2} Gamma[n+1/2]
+  // So, normalization term N becomes
+  //     N = (2Re[g])^{n/2+1/4} Sqrt(1/Gamma[n+1/2])
+  double Nterm(int nd, int nA, double gAr) {
 
     VectorXd gint(nA+1);
-    gammaint_nhalf(nA, &gint);
+    GammaNhalf(nA, &gint);
 
     double nn = nA*0.5+0.25;
     double c = pow(2.0, nn) * sqrt(1/gint[nA]);
@@ -60,88 +59,23 @@ namespace qpbranch {
     }
   }
 
-  void hermite_coef_d(complex<double> gAB, complex<double> wAB, double RA, double RB,
-		      int maxnA, int maxnB, multi_array<complex<double>, 3> *res) {
-    assert(maxnA>=0);
-    assert(maxnB>=0);
-    
-    int maxNk = maxnA + maxnB;
-    
-    (*res)[0][0][0] = 1.0;
-
-    for(int nA = 0; nA <= maxnA; nA++) {
-      for(int nB = 0; nB <= maxnB; nB++) {
-	for(int Nk = nA+nB+1; Nk<=maxNk; Nk++) {
-	  (*res)[nA][nB][Nk] = 0.0;
-	}
-      }
-    }
-
-    for(int nAB = 1; nAB <= maxnA+maxnB; nAB++) {
-      for(int nA = 0; nA <= min(maxnA, nAB); nA++) {
-	int nB = nAB-nA;
-	if(nB<=maxnB) {
-	  for(int Nk = 0; Nk <= min(nAB, maxNk); Nk++) {
-	    complex<double> v(0);
-	    if(nA > 0) {
-	      v += (wAB-RA) * (*res)[nA-1][nB][Nk];
-	      if(Nk-1 >= 0) 
-		v += 1.0/(2.0*gAB) * (*res)[nA-1][nB][Nk-1];
-	      if(Nk+1 <= maxNk)
-		v += (Nk+1.0) * (*res)[nA-1][nB][Nk+1];
-	    } else if(nB > 0) {
-	      v += (wAB-RB) * (*res)[nA][nB-1][Nk];
-	      if(Nk-1>=0)
-		v += 1.0/(2.0*gAB) * (*res)[nA][nB-1][Nk-1];
-	      if(Nk+1<=maxNk)
-		v += (Nk+1.0)   * (*res)[nA][nB-1][Nk+1];
-	    }
-	    (*res)[nA][nB][Nk] = v;
-	  }
-	}
-      }
-    }
-  }
-  complex<double> hermite_coef_d_0(complex<double> gAB, complex<double> wAB, double RA, double RB,
-				   int nA, int nB, int Nk) {
-    if(nA==0 && nB==0 && Nk==0)
-      return 1.0;
-    
-    if(Nk<0 || Nk>nA+nB)
-      return 0.0;
-
-    if(nA>0) {
-      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk-1);
-      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk  );
-      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA-1, nB, Nk+1);
-      return 1.0/(2.0*gAB)*res0 + (wAB-RA)*res1 + (Nk+1.0)*res2;
-    } else {
-      auto res0 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk-1);
-      auto res1 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk  );
-      auto res2 = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB-1, Nk+1);
-      return 1.0/(2.0*gAB)*res0 + (wAB-RB)*res1 + (Nk+1.0)*res2;
-    }    
-  }
-
-  
-
-  OpBufBasic::OpBufBasic(int num) : num_(num), nums_(num_), ns_(num_), cs_(num_){}
-  int OpBufBasic::maxn(int A) {
+  int OpBufBasic::Maxn(int A) {
     assert(A>=0 && A<num_);
     return ns_[A].maxCoeff();    
   }
-  void OpBufBasic::init_zero(int A, int num) {
+  void OpBufBasic::InitZero(int A, int num) {
+
     nums_[A] = num;
     ns_[A] = VectorXi::Zero(num);
     cs_[A] = VectorXcd::Zero(num);
   }
-  void OpBufBasic::matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
-    opbra->matrix(this, basis, res);
+  void OpBufBasic::Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
+    opbra->Matrix(this, basis, res);
   }
-  void OpBufBasic::matrix(OpBufBasic *ket, Pwgto *basis, MatrixXcd *res) {
+  void OpBufBasic::Matrix(OpBufBasic *ket, Pwgto *basis, MatrixXcd *res) {
     
-    for(int A = 0; A < basis->num_; A++) {
-      for(int B = 0; B < basis->num_; B++) {	
+    for(int A = 0; A < basis->num(); A++) {
+      for(int B = 0; B < basis->num(); B++) {	
 	complex<double> cumsum(0);
 	const auto& nAs(this->ns_[A]); // ncs_bra(bra->ncs_[A]);
 	const auto& nBs(ket->ns_[B]); //const auto& ncs_ket(ket->ncs_[B]);
@@ -149,7 +83,7 @@ namespace qpbranch {
 	const auto& cBs(ket->cs_[B]);
 	for(int i = 0; i < this->nums_[A]; i++) {
 	  for(int j = 0; j < ket->nums_[B]; j++) {	    
-	    cumsum += conj(cAs[i]) * cBs[j] * basis->getd(A,B,nAs[i], nBs[j], 0);
+	    cumsum += conj(cAs[i]) * cBs[j] * basis->get_d(A,B,nAs[i], nBs[j], 0);
 	  }
 	}
 	(*res)(A,B) = cumsum * basis->eAB_(A,B) * basis->hAB_(A,B);
@@ -157,51 +91,51 @@ namespace qpbranch {
     }
 
   }
-  void OpBufBasic::matrix(OpBufGausspot *ket, Pwgto *basis, MatrixXcd *res) {
+  void OpBufBasic::Matrix(OpBufGausspot *ket, Pwgto *basis, MatrixXcd *res) {
     
-    auto opV = ket->op_;
-    for(int A = 0; A < basis->num_; A++) {
-      for(int B = 0; B < basis->num_; B++) {
+    auto opV = ket->op();
+    for(int A = 0; A < basis->num(); A++) {
+      for(int B = 0; B < basis->num(); B++) {
 	const auto& nAs(this->ns_[A]);
 	const auto& cAs(this->cs_[A]);
-	int nB = basis->ns_[B];
-	complex<double> cB = basis->Ns_[B];
+	int nB = basis->ns()[B];
+	complex<double> cB = basis->Ns()[B];
 
 	int max_nA_nB = nAs.maxCoeff() + nB;
 	VectorXcd intg(max_nA_nB+1);
-	dwn_gaussint_shift(max_nA_nB, opV->b_, basis->gAB_(A,B), basis->RAB_(A,B), &intg);
+	DwIntGauss(max_nA_nB, opV->b(), basis->gAB_(A,B), basis->RAB_(A,B), &intg);
 	
 	complex<double> cumsum(0.0);
 	for(int i = 0; i < this->nums_[A]; i++) {
 	  int nA = nAs[i];
 	  complex<double> cumsum1(0.0);
 	  for(int N = 0; N <= max_nA_nB; N++)
-	    cumsum1 += basis->getd(A,B,nA,nB,N) * intg(N);
+	    cumsum1 += basis->get_d(A,B,nA,nB,N) * intg(N);
 	  cumsum += cumsum1 * conj(cAs[i]) * cB;
 	}
-	(*res)(A,B) = cumsum * basis->eAB_(A,B) * opV->v0_;
+	(*res)(A,B) = cumsum * basis->eAB_(A,B) * opV->v0();
       }
     }
   }
-  void OpBufBasic::at(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+  void OpBufBasic::At(Pwgto *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     complex<double> ii(0.0, 1.0);
     for (int ix = 0; ix < xs.size(); ix++) {
       complex<double> cumsum(0.0);      
       for (int A = 0; A < num_; A++) {
-	double d = xs[ix] - basis->Rs_[A];
+	double d = xs[ix] - basis->Rs()[A];
 	complex<double> cumsum1(0.0);
 	for(int i = 0; i < nums_[A]; i++) {
-	  cumsum1 += cs_[A][i] * pow(d, ns_[A][i]) * exp(-basis->gs_[A]*d*d - ii*basis->Ps_[A]*d);
+	  cumsum1 += cs_[A][i]*pow(d, ns_[A][i]) * exp(-basis->gs()[A]*d*d - ii*basis->Ps()[A]*d);
 	}
 	cumsum += cs[A]*cumsum1;
       }
       (*res)(ix) = cumsum;
     }    
   }
-  void OpBufBasic::matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) {
-    opbra->matrix(this, basis, res);
+  void OpBufBasic::Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) {
+    opbra->Matrix(this, basis, res);
   }
-  void OpBufBasic::matrix(OpBufBasic *ket, Pwgto1c *basis, MatrixXcd *res) {
+  void OpBufBasic::Matrix(OpBufBasic *ket, Pwgto1c *basis, MatrixXcd *res) {
     
     for(int A = 0; A < basis->num_; A++) {
       for(int B = 0; B < basis->num_; B++) {	
@@ -222,10 +156,10 @@ namespace qpbranch {
     }
 
   }
-  void OpBufBasic::matrix(OpBufGausspot *ket, Pwgto1c *basis, MatrixXcd *res) {
-    auto opV = ket->op_;
+  void OpBufBasic::Matrix(OpBufGausspot *ket, Pwgto1c *basis, MatrixXcd *res) {
+    auto opV = ket->op();
     complex<double> gg = conj(basis->g0_) + basis->g0_;
-    complex<double> dq = basis->R0_ - opV->q0_;
+    complex<double> dq = basis->R0_ - opV->q0();
     for(int A = 0; A < basis->num_; A++) {
       for(int B = 0; B < basis->num_; B++) {
 	const auto& nAs(this->ns_[A]);
@@ -234,7 +168,7 @@ namespace qpbranch {
 	complex<double> cB = basis->Ns_[B];
 	int max_nA_nB = nAs.maxCoeff() + nB;
 	VectorXcd intg(max_nA_nB+1);
-	dwn_gaussint_shift(max_nA_nB, opV->b_, gg, dq, &intg);	
+	DwIntGauss(max_nA_nB, opV->b(), gg, dq, &intg);	
 	complex<double> cumsum(0); 
 	for(int i = 0; i < this->nums_[A]; i++) {
 	  int nA = nAs[i];
@@ -244,7 +178,7 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufBasic::at(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
+  void OpBufBasic::At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
     complex<double> ii(0.0, 1.0);
     for (int ix = 0; ix < xs.size(); ix++) {
       complex<double> cumsum(0.0);      
@@ -262,18 +196,18 @@ namespace qpbranch {
 
   
   OpBufId::OpBufId(const VectorXi& ns) : OpBufBasic(ns.size()) {
-    for(int A = 0; A < num_; A++) {
-      this->init_zero(A, 1);
+    for(int A = 0; A < num(); A++) {
+      this->InitZero(A, 1);
       this->ns_[A][0] = ns[A];
     }
   }
-  void OpBufId::setup(Pwgto *basis) {
+  void OpBufId::SetUp(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
-      ns_[A][0] = basis->ns_[A];
-      cs_[A][0] = basis->Ns_[A];
+      ns_[A][0] = basis->ns()[A];
+      cs_[A][0] = basis->Ns()[A];
     }
   }
-  void OpBufId::setup(Pwgto1c *basis) {
+  void OpBufId::SetUp(Pwgto1c *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns_[A];
       cs_[A][0] = basis->Ns_[A];
@@ -281,17 +215,17 @@ namespace qpbranch {
   }
   OpBufRn::OpBufRn(const VectorXi& ns, int n): OpBufBasic(ns.size()), n_(n) {
     for(int A = 0; A < num_; A++) {
-      this->init_zero(A, 1);
+      this->InitZero(A, 1);
       this->ns_[A][0] = ns[A] + n;
     }
   }
-  void OpBufRn::setup(Pwgto *basis) {
+  void OpBufRn::SetUp(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
-      ns_[A][0] = basis->ns_[A] + n_;
-      cs_[A][0] = basis->Ns_[A];
+      ns_[A][0] = basis->ns()[A] + n_;
+      cs_[A][0] = basis->Ns()[A];
     }
   }
-  void OpBufRn::setup(Pwgto1c *basis) {
+  void OpBufRn::SetUp(Pwgto1c *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns_[A] + n_;
       cs_[A][0] = basis->Ns_[A];
@@ -306,27 +240,27 @@ namespace qpbranch {
       vector<pair<int,complex<double> > > ncs;
       if(n==1) {
 	if(nA == 0) {
-	  this->init_zero(A, 2);
+	  this->InitZero(A, 2);
 	  ns_[A][0] = nA+1;
 	  ns_[A][1] = nA;
 	} else {
-	  this->init_zero(A, 3);
+	  this->InitZero(A, 3);
 	  ns_[A][2] = nA-1;
 	}
       } else if(n==2) {
 	if (nA == 0) {
-	  this->init_zero(A, 3);
+	  this->InitZero(A, 3);
 	  ns_[A][0] = nA+2;
 	  ns_[A][1] = nA+1;
 	  ns_[A][2] = nA;
 	} else if(nA == 1) {
-	  this->init_zero(A, 4);
+	  this->InitZero(A, 4);
 	  ns_[A][0] = nA+2;
 	  ns_[A][1] = nA+1;
 	  ns_[A][2] = nA;
 	  ns_[A][3] = nA-1;
 	} else {
-	  this->init_zero(A, 5);
+	  this->InitZero(A, 5);
 	  ns_[A][0] = nA+2;
 	  ns_[A][1] = nA+1;
 	  ns_[A][2] = nA;
@@ -337,14 +271,14 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufPn::setup(Pwgto *basis) {
+  void OpBufPn::SetUp(Pwgto *basis) {
     complex<double> ii(0.0, 1.0);
     for(int A = 0; A < num_; A++) {
-      int nA = basis->ns_[A];      
-      double pA = basis->Ps_[A];
-      complex<double> gA = basis->gs_[A];
+      int nA = basis->ns()[A];
+      double pA = basis->Ps()[A];
+      complex<double> gA = basis->gs()[A];
       if(n_ == 1) {
-	complex<double> c = -ii*basis->Ns_[A];
+	complex<double> c = -ii*basis->Ns()[A];
 	ns_[A][0] = nA+1;
 	cs_[A][0] = c * (-2.0*gA);
 	ns_[A][1] = nA;
@@ -354,7 +288,7 @@ namespace qpbranch {
 	  cs_[A][2] = c * (1.0*nA);
 	}	
       } else if(n_ == 2) {
-	complex<double> c = -basis->Ns_[A];
+	complex<double> c = -basis->Ns()[A];
 	ns_[A][0] = nA+2;
 	cs_[A][0] = c * 4.0*gA*gA;
 	ns_[A][1] = nA+1;
@@ -372,7 +306,7 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufPn::setup(Pwgto1c *basis) {
+  void OpBufPn::SetUp(Pwgto1c *basis) {
     complex<double> ii(0.0, 1.0);
     for(int A = 0; A < num_; A++) {
       int nA = basis->ns_[A];      
@@ -413,27 +347,27 @@ namespace qpbranch {
       switch(id) {
       case kIdDR:
 	if(nA == 0)  {
-	  this->init_zero(A, 2);
+	  this->InitZero(A, 2);
 	  ns_[A][0] = nA+1;
 	  ns_[A][1] = nA;
 	} else {
-	  this->init_zero(A, 3);
+	  this->InitZero(A, 3);
 	  ns_[A][0] = nA+1;
 	  ns_[A][1] = nA;
 	  ns_[A][2] = nA-1;
 	}
 	break;
       case kIdDP:
-	this->init_zero(A, 1);
+	this->InitZero(A, 1);
 	ns_[A][0] = nA+1;
 	break;
       case kIdDgr:
-	this->init_zero(A, 2);
+	this->InitZero(A, 2);
 	ns_[A][0] = nA+2;
 	ns_[A][1] = nA;
 	break;
       case kIdDgi:
-	this->init_zero(A, 1);
+	this->InitZero(A, 1);
 	ns_[A][0] = nA+2;
 	break;
       default:
@@ -441,13 +375,13 @@ namespace qpbranch {
       }
     }
   }
-  void OpBufDa::setup(Pwgto *basis) {
+  void OpBufDa::SetUp(Pwgto *basis) {
     complex<double> ii(0, 1);
-    for(int A = 0; A < basis->num_; A++) {
-      int nA = basis->ns_[A];
-      double pA = basis->Ps_[A];
-      complex<double> gA = basis->gs_[A];
-      double NA = basis->Ns_[A];
+    for(int A = 0; A < basis->num(); A++) {
+      int nA = basis->ns()[A];
+      double pA = basis->Ps()[A];
+      complex<double> gA = basis->gs()[A];
+      double NA = basis->Ns()[A];
       switch(id_) {
       case kIdDR:
 	ns_[A][0] = nA+1;
@@ -467,18 +401,18 @@ namespace qpbranch {
 	ns_[A][0] = nA+2;
 	cs_[A][0] = -NA;
 	ns_[A][1] = nA;
-	cs_[A][1] = calc_nterm(1, nA, real(gA));
+	cs_[A][1] = Nterm(1, nA, real(gA));
 	break;
       case kIdDgi:
 	ns_[A][0] = nA+2;
 	cs_[A][0] = -ii*NA;
 	break;
       default:
-	assert(false||"invalid id");
+	throw runtime_error("invalid id");	
       }
     }
   }
-  void OpBufDa::setup(Pwgto1c *basis) {
+  void OpBufDa::SetUp(Pwgto1c *basis) {
     complex<double> ii(0, 1);
     for(int A = 0; A < basis->num_; A++) {
       int nA = basis->ns_[A];
@@ -504,7 +438,7 @@ namespace qpbranch {
 	ns_[A][0] = nA+2;
 	cs_[A][0] = -NA;
 	ns_[A][1] = nA;
-	cs_[A][1] = calc_nterm(1, nA, real(gA));
+	cs_[A][1] = Nterm(1, nA, real(gA));
 	break;
       case kIdDgi:
 	ns_[A][0] = nA+2;
@@ -518,27 +452,27 @@ namespace qpbranch {
 
   OpBufGausspot::OpBufGausspot(const VectorXi& ns, OperatorGausspot *op) : num_(ns_.size()),
 									   ns_(ns), op_(op) {}  
-  int OpBufGausspot::maxn(int A) { return ns_(A); }
-  void OpBufGausspot::setup(Pwgto*) {}
-  void OpBufGausspot::matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
-    opbra->matrix(this, basis, res);
+  int OpBufGausspot::Maxn(int A) { return ns_(A); }
+  void OpBufGausspot::SetUp(Pwgto*) {}
+  void OpBufGausspot::Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
+    opbra->Matrix(this, basis, res);
   }
-  void OpBufGausspot::matrix(OpBufBasic *, Pwgto *, MatrixXcd *) {
+  void OpBufGausspot::Matrix(OpBufBasic *, Pwgto *, MatrixXcd *) {
     assert(false&&"not impl");
   }
-  void OpBufGausspot::matrix(OpBufGausspot *, Pwgto *, MatrixXcd *) {}
-  void OpBufGausspot::at(Pwgto*, const VectorXcd&, const VectorXd&, VectorXcd *) {
+  void OpBufGausspot::Matrix(OpBufGausspot *, Pwgto *, MatrixXcd *) {}
+  void OpBufGausspot::At(Pwgto*, const VectorXcd&, const VectorXd&, VectorXcd *) {
     throw runtime_error("not impl");
   }
-  void OpBufGausspot::setup(Pwgto1c *) {}
-  void OpBufGausspot::matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) {
-    opbra->matrix(this, basis, res);
+  void OpBufGausspot::SetUp(Pwgto1c *) {}
+  void OpBufGausspot::Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) {
+    opbra->Matrix(this, basis, res);
   }
-  void OpBufGausspot::matrix(OpBufBasic *, Pwgto1c *, MatrixXcd *) {
+  void OpBufGausspot::Matrix(OpBufBasic *, Pwgto1c *, MatrixXcd *) {
     assert(false&&"not impl");
   }
-  void OpBufGausspot::matrix(OpBufGausspot *, Pwgto1c *, MatrixXcd *) {}
-  void OpBufGausspot::at(Pwgto1c*, const VectorXcd&, const VectorXd&, VectorXcd *) {
+  void OpBufGausspot::Matrix(OpBufGausspot *, Pwgto1c *, MatrixXcd *) {}
+  void OpBufGausspot::At(Pwgto1c*, const VectorXcd&, const VectorXd&, VectorXcd *) {
     throw runtime_error("not impl");
   }
   

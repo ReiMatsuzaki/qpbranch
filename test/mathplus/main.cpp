@@ -8,13 +8,13 @@ using namespace Eigen;
 
 TEST(utest_math, test_gtoint2n) {
   VectorXcd res(5);
-  complex<double> z(2.0);
-  gtoint2n(1, z, &res);
+  complex<double> a(2.0);
+  IntGto2N(1, a, &res);
 }
 TEST(utest_math, test_gtointn_shift) {
   int maxn = 6;
   complex<double> a(1.1), b(1.2);
-  double q0(0.3);
+  double w(0.3);
   VectorXcd calc(maxn+1);
   VectorXd ref(maxn+1);
   double tol;
@@ -27,7 +27,7 @@ TEST(utest_math, test_gtointn_shift) {
     -0.132504937609851,
     0.231054357413855;
 
-  gtointn_shift(maxn, a, b, q0, &calc);
+  IntGtoShift(maxn, a, b, w, &calc);
 
   for(int n = 0; n <= maxn; n++) {
     ASSERT_NEAR(ref(n), real(calc(n)), tol) << "n: " << n;
@@ -35,14 +35,15 @@ TEST(utest_math, test_gtointn_shift) {
   
 }
 TEST(utest_math, test_dwn_gaussint_shift) {
-  /* see daily/2018/4/17/qpbranch */
+  // see daily/2018/4/17/qpbranch
 
-  complex<double> gp(1.2);
-  complex<double> wp(1.3);
+  complex<double> a(1.2);
   complex<double> b(2.1);
+  complex<double> w(1.3);
+  
   int maxN = 3;
   VectorXcd gints(maxN+1);
-  dwn_gaussint_shift(maxN, b, gp, wp, &gints);
+  DwIntGauss(maxN, a, b, w, &gints);
 
   double tol = pow(10.0, -14.0);
   ASSERT_NEAR(0.268436270813165,  real(gints(0)), tol);

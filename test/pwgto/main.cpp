@@ -18,12 +18,12 @@ TEST(utest_pwgto, test_coef_d) {
   const int maxnA = 3;
   const int maxnB = 2;
   multi_array<complex<double>, 3> d(extents[maxnA+1][maxnB+1][maxnA+maxnB+1]);;
-  hermite_coef_d(gAB, wAB, RA, RB, maxnA, maxnB, &d);
+  HermiteCoefD(gAB, wAB, RA, RB, maxnA, maxnB, &d);
   
   for(int nA=0; nA<=maxnA; nA++) {
     for(int nB=0; nB<=maxnB; nB++) {
       for(int Nk=0; Nk<=maxnA+maxnB; Nk++) {
-	auto ref = hermite_coef_d_0(gAB, wAB, RA, RB, nA, nB, Nk);
+	auto ref = HermiteCoefD0(gAB, wAB, RA, RB, nA, nB, Nk);
 	ASSERT_DOUBLE_EQ(real(ref), real(d[nA][nB][Nk])) << "nA:" << nA << endl;
 	ASSERT_DOUBLE_EQ(imag(ref), imag(d[nA][nB][Nk])) << "nA:" << nA << endl;	
       }
@@ -41,13 +41,13 @@ TEST(utest_pwgto, overlap) {
   
   vector<Operator*> ops = {op_id};
   auto *basis = new Pwgto(ns, ops);
-  basis->gs_ << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
-  basis->Rs_ << 0.0, 0.0, 0.2, 0.2;
-  basis->Ps_ << 0.0, 0.0, 0.5, 0.5;
-  basis->setup();
+  basis->ref_gs() << 1.0,  complex<double>(0.9,-0.8), 1.0, complex<double>(0.2, 0.1);
+  basis->ref_Rs() << 0.0, 0.0, 0.2, 0.2;
+  basis->ref_Ps() << 0.0, 0.0, 0.5, 0.5;
+  basis->SetUp();
 
   MatrixXcd S(num, num);
-  basis->matrix(op_id, op_id, &S);
+  basis->Matrix(op_id, op_id, &S);
 
   for(int A = 0; A<num; A++) {
     ASSERT_DOUBLE_EQ(1.0, S(A,A).real()) << "A:" << A << endl;
@@ -63,10 +63,10 @@ TEST(utest_pwgto, overlap) {
 
   int A = 2;
   int B = 3;
-  auto calc = S(A, B)/(basis->Ns_(A)*basis->Ns_(B));
+  auto calc = S(A, B)/(basis->Ns()(A)*basis->Ns()(B));
   VectorXcd gg(9+1);
-  gtoint2n(9, conj(basis->gs_(A))+basis->gs_(B), &gg);
-  auto ref = gg((basis->ns_(A) + basis->ns_(B))/2);
+  IntGto2N(9, conj(basis->gs()(A))+basis->gs()(B), &gg);
+  auto ref = gg((basis->ns()(A) + basis->ns()(B))/2);
 
   ASSERT_DOUBLE_EQ(real(ref), real(calc)) << "A:" << A << endl << "B:" << B << endl;
   ASSERT_DOUBLE_EQ(imag(ref), imag(calc)) << "A:" << A << endl << "B:" << B << endl;
@@ -81,35 +81,35 @@ TEST(utest_pwgto, multipole) {
   vector<Operator*> ops = {id, R1, R2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
   auto *basis = new Pwgto(ns, ops);
-  basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
-  basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
-  basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
-  basis->setup();
+  basis->ref_gs() << 1.1, 1.1, 1.2, 0.4, 0.8;
+  basis->ref_Rs() << 0.0, 0.1, 0.1, 0.1, 0.3;  
+  basis->ref_Ps() << 0.0, 0.0, 0.3, 0.0, 0.1;
+  basis->SetUp();
 
   MatrixXcd S(num, num);
-  basis->matrix(id, id, &S);
+  basis->Matrix(id, id, &S);
   
   MatrixXcd M01(num, num);
-  basis->matrix(id, R1, &M01);
+  basis->Matrix(id, R1, &M01);
 
   MatrixXcd M10(num, num);
-  basis->matrix(R1, id, &M10);
+  basis->Matrix(R1, id, &M10);
 
   MatrixXcd M02(num, num);
-  basis->matrix(id, R2, &M02);
+  basis->Matrix(id, R2, &M02);
 
   MatrixXcd M11(num, num);
-  basis->matrix(R1, R1, &M11);
+  basis->Matrix(R1, R1, &M11);
 
   MatrixXcd M20(num, num);
-  basis->matrix(R2, id, &M20);
+  basis->Matrix(R2, id, &M20);
   
   for(int A = 0; A < num; A++) {
-    auto g = conj(basis->gs_(A)) + basis->gs_(A);
-    int n = basis->ns_(A);
+    auto g = conj(basis->gs()(A)) + basis->gs()(A);
+    int n = basis->ns()(A);
     VectorXcd gg(n+1+1);
-    gtoint2n(n+1, g, &gg);
-    auto ref = gg(n+1) * pow(basis->Ns_(A), 2);
+    IntGto2N(n+1, g, &gg);
+    auto ref = gg(n+1) * pow(basis->Ns()(A), 2);
     ASSERT_DOUBLE_EQ(real(ref), real(M20(A,A)));
     ASSERT_DOUBLE_EQ(real(ref), real(M02(A,A)));
   }
@@ -137,25 +137,25 @@ TEST(utest_pwgto, pn) {
   vector<Operator*> ops = {id, P1, P2};
   VectorXi ns(num); ns << 0, 0, 2, 1, 0;
   auto *basis = new Pwgto(ns, ops);
-  basis->gs_ << 1.1, 1.1, 1.2, 0.4, 0.8;
-  basis->Rs_ << 0.0, 0.1, 0.1, 0.1, 0.3;  
-  basis->Ps_ << 0.0, 0.0, 0.3, 0.0, 0.1;
-  basis->setup();
+  basis->ref_gs() << 1.1, 1.1, 1.2, 0.4, 0.8;
+  basis->ref_Rs() << 0.0, 0.1, 0.1, 0.1, 0.3;  
+  basis->ref_Ps() << 0.0, 0.0, 0.3, 0.0, 0.1;
+  basis->SetUp();
 
   MatrixXcd M01(num, num);
-  basis->matrix(id, P1, &M01);
+  basis->Matrix(id, P1, &M01);
 
   MatrixXcd M10(num, num);
-  basis->matrix(P1, id, &M10);
+  basis->Matrix(P1, id, &M10);
 
   MatrixXcd M02(num, num);
-  basis->matrix(id, P2, &M02);
+  basis->Matrix(id, P2, &M02);
 
   MatrixXcd M11(num, num);
-  basis->matrix(P1, P1, &M11);
+  basis->Matrix(P1, P1, &M11);
 
   MatrixXcd M20(num, num);
-  basis->matrix(P2, id, &M20);
+  basis->Matrix(P2, id, &M20);
   
   for(int A = 0; A < num; A++) {
     for(int B = 0; B < num; B++) {
@@ -196,33 +196,33 @@ TEST(utest_pwgto, da) {
       vector<Operator*> ops = {op_id, op_da, op_pot};
       
       auto *basis = new Pwgto(ns, ops);
-      basis->Rs_ << R0, R0, R0, R1;
-      basis->Ps_ << P0, P0, P0, P1;
-      basis->gs_ << g0, g0, g0, g1;
+      basis->ref_Rs() << R0, R0, R0, R1;
+      basis->ref_Ps() << P0, P0, P0, P1;
+      basis->ref_gs() << g0, g0, g0, g1;
       if(kId==kIdDR) {
-	basis->Rs_(1) += dx;
-	basis->Rs_(2) -= dx;
+	basis->ref_Rs()(1) += dx;
+	basis->ref_Rs()(2) -= dx;
       } else if(kId==kIdDP) {
-	basis->Ps_(1) += dx;
-	basis->Ps_(2) -= dx;
+	basis->ref_Ps()(1) += dx;
+	basis->ref_Ps()(2) -= dx;
       } else if(kId==kIdDgr) {
-	basis->gs_(1) += complex<double>(dx, 0.0);
-	basis->gs_(2) -= complex<double>(dx, 0.0);
+	basis->ref_gs()(1) += complex<double>(dx, 0.0);
+	basis->ref_gs()(2) -= complex<double>(dx, 0.0);
       } else if(kId==kIdDgi) {
-	basis->gs_(1) += complex<double>(0.0, dx);
-	basis->gs_(2) -= complex<double>(0.0, dx);
+	basis->ref_gs()(1) += complex<double>(0.0, dx);
+	basis->ref_gs()(2) -= complex<double>(0.0, dx);
       }
-      basis->setup();
+      basis->SetUp();
       
       MatrixXcd M1(num,num), M2(num,num);
-      basis->matrix(op_id,  op_da, &M1);
-      basis->matrix(op_id,  op_id, &M2);
+      basis->Matrix(op_id,  op_da, &M1);
+      basis->Matrix(op_id,  op_id, &M2);
       EXPECT_NEAR(M1(3, 0).real(), ((M2(3,1)-M2(3,2))/(2*dx)).real(), dx*dx) <<
 	"kId:" << kId << endl <<
 	"n  :" << n   << endl;
       
-      basis->matrix(op_da, op_pot, &M1);
-      basis->matrix(op_id, op_pot, &M2);
+      basis->Matrix(op_da, op_pot, &M1);
+      basis->Matrix(op_id, op_pot, &M2);
       EXPECT_NEAR(M1(0, 3).real(), ((M2(1,3)-M2(2,3))/(2*dx)).real(), dx*dx) <<
 	"kId:" << kId << endl <<
 	"n  :" << n   << endl;
@@ -245,20 +245,20 @@ TEST(utest_pwgto, test_harmonic) {
   auto *basis = new Pwgto(ns, ops);
 
   complex<double> g = m*w/2;
-  basis->gs_ = VectorXcd::Ones(num)*g;
-  basis->Rs_ = VectorXd::Ones(num )*x0;
-  basis->Ps_ = VectorXd::Zero(num);
-  basis->setup();
+  basis->ref_gs() = VectorXcd::Ones(num)*g;
+  basis->ref_Rs() = VectorXd::Ones(num )*x0;
+  basis->ref_Ps() = VectorXd::Zero(num);
+  basis->SetUp();
 
   MatrixXcd P2(num,num), R2(num,num), H(num,num), S(num,num);
-  basis->matrix(opid, opid, &S);
-  basis->matrix(opid, opR2, &R2);
-  basis->matrix(opid, opP2, &P2);
+  basis->Matrix(opid, opid, &S);
+  basis->Matrix(opid, opR2, &R2);
+  basis->Matrix(opid, opP2, &P2);
   H = P2/(2*m) + k/2*R2;
 
   VectorXd eigs;
   MatrixXcd U;
-  zhegv(H, S, &U, &eigs);
+  Zhegv(H, S, &U, &eigs);
 
   int nx(3);
   VectorXd xs(nx);
@@ -267,7 +267,7 @@ TEST(utest_pwgto, test_harmonic) {
   for(int n = 0; n < num-1; n++) {
     ASSERT_DOUBLE_EQ(w*(n+0.5), eigs(n)) << "n: " << n;
     VectorXcd ys(nx);
-    basis->at(opid, U.col(n), xs, &ys);
+    basis->At(opid, U.col(n), xs, &ys);
   }
   
   delete basis;  
@@ -286,21 +286,21 @@ TEST(utest_pwgto, test_gausspot) {
   auto opV  = new OperatorGausspot(v0, b, q0);
   vector<Operator*> ops = {opid, opdR, opV};
   auto *basis = new Pwgto(ns, ops);
-  basis->gs_ << 1000.0;
-  basis->Rs_ << 0.3;
-  basis->setup();
+  basis->ref_gs() << 1000.0;
+  basis->ref_Rs() << 0.3;
+  basis->SetUp();
   
   MatrixXcd V(num,num);
-  basis->matrix(opid, opV, &V);
-  double R0 = basis->Rs_(0);
+  basis->Matrix(opid, opV, &V);
+  double R0 = basis->Rs()(0);
 
   double dR = 0.001;
   VectorXd Rs(3); Rs << R0, R0-dR, R0+dR;
   VectorXcd refs(3);
-  opV->at(Rs, &refs);
+  opV->At(Rs, &refs);
   ASSERT_NEAR(real(refs(0)), real(V(0,0)), 3.0*pow(10.0, -3));
 
-  basis->matrix(opdR, opV, &V);
+  basis->Matrix(opdR, opV, &V);
   complex<double> ref = (refs[2]-refs[1])/(2.0*dR);
   ASSERT_NEAR(real(ref), 2.0*real(V(0,0)), pow(10.0, -3));
 

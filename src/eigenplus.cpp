@@ -9,23 +9,23 @@ namespace qpbranch {
   using std::complex;
   
   using Eigen::GeneralizedSelfAdjointEigenSolver;
-  void zhegv(const MatrixXcd& H, const MatrixXcd& S, MatrixXcd *U, VectorXd *w) {
+  void Zhegv(const MatrixXcd& H, const MatrixXcd& S, MatrixXcd *U, VectorXd *w) {
     GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
     es.compute(H, S);
     *w = es.eigenvalues();
     *U = es.eigenvectors();
   }
-  void zgesv(const MatrixXcd& M, const VectorXcd& b, VectorXcd *x) {
+  void Zgesv(const MatrixXcd& M, const VectorXcd& b, VectorXcd *x) {
     Eigen::FullPivLU<MatrixXcd> lu(M);
     *x = lu.solve(b);
   }
-  void dgesv(const MatrixXd&  M, const VectorXd& b, VectorXd *x) {
+  void Dgesv(const MatrixXd&  M, const VectorXd& b, VectorXd *x) {
     Eigen::FullPivLU<MatrixXd> lu(M);
     *x = lu.solve(b);    
   }
-  void intet_gdiag(const MatrixXcd& H, const MatrixXcd& S, double dt, VectorXcd *ptr_res) {
+  void IntetGdiag(const MatrixXcd& H, const MatrixXcd& S, double dt, VectorXcd *ptr_res) {
 
-    complex<double> ii(0.0, 1.0);
+    complex<double> ii(0.0, 1.0);    
     
     int n = H.rows();
     assert(H.cols()==n);
@@ -38,9 +38,9 @@ namespace qpbranch {
 
     VectorXcd& c(*ptr_res);
     
-    zhegv(H, S, &U, &w);
+    Zhegv(H, S, &U, &w);
 
-    c = U.adjoint() * c;
+    c = U.adjoint() * S * c;
     c = (-ii*w*dt).array().exp() * c.array();
     c = U*c;
     
