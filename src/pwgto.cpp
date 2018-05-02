@@ -158,20 +158,6 @@ namespace qpbranch {
 
     buffer_map_[opket]->Matrix(buffer_map_[opbra], this, res);
     
-    /*
-    if(is_buf_basic(opbra) && is_buf_basic(opket)) {
-      OpBufBasic *bra_buf = static_cast<OpBufBasic*>(buffer_map_[opbra]);
-      OpBufBasic *ket_buf = static_cast<OpBufBasic*>(buffer_map_[opket]);
-      calc_matrix(this, bra_buf, ket_buf, res);
-    } else if(is_buf_basic(opbra) && ! is_buf_basic(opket)) {
-      OpBufBasic    *bra_buf = static_cast<OpBufBasic*>(   buffer_map_[opbra]);
-      OpBufGausspot *ket_buf = static_cast<OpBufGausspot*>(buffer_map_[opket]);
-      calc_matrix(this, bra_buf, ket_buf, res);
-    } else {
-      throw runtime_error("invalid bra type");
-    }
-    */
-    
   }  
   void Pwgto::At(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
 

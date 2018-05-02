@@ -24,11 +24,17 @@ namespace qpbranch {
     bool is_setup_;
     Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
     vector<Operator*> ops_opt_;
+    VectorXd w_;    
+    MatrixXcd U_;
+    VectorXcd Clam_;
     Pwgto *basis_;
+    VectorXd xs_; // grid for dumping wave functions.
     // Main
     DySetPoly(Operator *pot, const VectorXi ns, string type_gauss);
     void SetUp();
     void Update(double dt);
+    // Accessor
+    VectorXd& ref_xs() { return xs_; }
     // Calc
     void DotxQhamilton(VectorXd *res);
     void DotxQuantum(bool is_tdvp, VectorXd *res);

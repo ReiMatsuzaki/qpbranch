@@ -67,6 +67,7 @@ namespace qpbranch {
   class OpBufId : public OpBufBasic {
   public:
     OpBufId(const VectorXi& ns);
+    //    OpBufId(const Polys& poly);
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
   };
@@ -75,6 +76,7 @@ namespace qpbranch {
     int n_;
   public:    
     OpBufRn(const VectorXi& ns, int n);
+    //    OpBufRn(const Polys& poly, int n);
     int n() const { return n_; }
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
@@ -84,6 +86,7 @@ namespace qpbranch {
     int n_;
   public:    
     OpBufPn(const VectorXi& ns, int n);
+    //    OpBufPn(const Polys& poly, int n);
     int n() const { return n_; }
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
@@ -93,6 +96,7 @@ namespace qpbranch {
     int id_;
   public:    
     OpBufDa(const VectorXi& ns, int id);
+    //    OpBufDa(const Polys& poly, int n);
     int id() const { return id_; }
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
@@ -104,6 +108,7 @@ namespace qpbranch {
     OperatorGausspot *op_;
   public:    
     OpBufGausspot(const VectorXi& ns, OperatorGausspot *op);
+    //    OpBufGausspot(const Polys& poly,  OperatorGausspot *op);
     int num() const { return num_; }
     const VectorXi& ns() const { return ns_; }
     OperatorGausspot *op() const { return op_; }

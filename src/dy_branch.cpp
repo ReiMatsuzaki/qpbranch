@@ -12,7 +12,6 @@ namespace qpbranch {
   using namespace std;
   using namespace mangan4;
 
-  // Main
   DySetPoly::DySetPoly(Operator *pot, const VectorXi ns, string type_gauss) {
 
     assert(type_gauss=="frozen"||type_gauss=="thawed");
@@ -56,6 +55,10 @@ namespace qpbranch {
       ops_opt_.push_back(Dgr_);
       ops_opt_.push_back(Dgi_);
     }
+
+    w_ = VectorXd::Zero(num_);
+    U_ = MatrixXcd::Zero(num_,num_);
+    Clam_ = VectorXcd::Zero(num_);
     
     basis_ = new Pwgto(ns, ops);
     
@@ -101,9 +104,18 @@ namespace qpbranch {
 
     // propagate fast part
     IntetGdiag(H, S, dt, &c_);
+
+    // save Eigen functions for internal motion;
+    double p0_bak = p0_;
+    p0_ = 0.0;
+    this->UpdateBasis();
+    this->Hamiltonian(id_, &H);
+    Zhegv(H, S, &U_, &w_);
+    p0_ = p0_bak;
+    this->UpdateBasis();
+    Clam_ = U_.adjoint() * S * c_;
     
   }
-  // Calc
   void DySetPoly::DotxQhamilton(VectorXd *res) {
     assert(is_setup_);
     
@@ -223,10 +235,29 @@ namespace qpbranch {
     
     this->UpdateBasis();
     basis_->DumpCon(it);
+    
     con.write_f1("c_re", it, c_.real());
     con.write_f1("c_im", it, c_.imag());
+
+    con.write_f1("clam_re", it, Clam_.real());
+    con.write_f1("clam_im", it, Clam_.imag());
+
+    if(xs_.size()>0) {
+      VectorXcd ys(xs_.size());;
+      basis_->At(id_, c_, xs_, &ys);
+      con.write_f1("psi_re", it, ys.real());
+      con.write_f1("psi_im", it, ys.imag());
+      for(int lam = 0; lam < num_; lam++) {
+	VectorXcd c = U_.col(lam);
+	basis_->At(id_, c_, xs_, &ys);
+	string lbl = "phi" + to_string(lam);
+	con.write_f1(lbl + "_re", it, ys.real());
+	con.write_f1(lbl + "_im", it, ys.imag());
+      }
+    }
 
     double norm2 = Norm2();
     con.write_f("norm2", it, norm2);
   }
+  
 }

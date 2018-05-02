@@ -38,12 +38,13 @@ namespace qpbranch {
     // Main
     Pwgto1c(const VectorXi& ns, double R0, double P0, complex<double> g0, const vector<Operator*>& ops);
     ~Pwgto1c();
+    double& ref_R0() { return R0_; }
+    double& ref_P0() { return P0_; }
     void SetUp();
     int size() const { return num_; }
     void Matrix(Operator *opbra, Operator *opket, MatrixXcd *res);
     void At(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-  };
-  
+  };  
 } 
 
 #endif
