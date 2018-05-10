@@ -5,7 +5,6 @@ include ${QPBRANCH_ROOT}/conf.mk
 
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
-main.o: main.cpp
 main.x: LIBS+=${GTEST_LIBS}
 main.x: main.o ${libqpbranch} ${libgtest_main} 
 

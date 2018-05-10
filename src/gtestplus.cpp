@@ -18,29 +18,34 @@ static eps(pow(10.0, -12.0));
 
 ::testing::AssertionResult AssertComplexNear(const char *a_expr,
 					     const char *b_expr,
+					     const char *eps_expr,
 					     std::complex<double> a,
 					     std::complex<double> b,
-					     double tol) {
-  if(ComplexIsNear(a,b,tol))
+					     double eps) {
+  if(ComplexIsNear(a,b,eps))
     return ::testing::AssertionSuccess();
 
   return ::testing::AssertionFailure()
     << a_expr << " and "  << b_expr << " are not near." << endl
     << a_expr << " : " << a << endl
-    << b_expr << " : " << b << endl
-    << "|" << a_expr << "-" << b_expr << "| : " << abs(a-b);
+    << b_expr << " : " << b << endl    
+    << "|" << a_expr << "-" << b_expr << "| : " << abs(a-b) << endl
+    << eps_expr << " : " << eps;
 }
 ::testing::AssertionResult AssertComplexEq(const char *a_expr,
 					   const char *b_expr,
 					   std::complex<double> a,
 					   std::complex<double> b) {
-  return AssertComplexNear(a_expr, b_expr, a, b, eps);
+  return AssertComplexNear(a_expr, b_expr, "eps", a, b, eps);
 }
+
+/*
 ::testing::AssertionResult AssertMatrixXcdNear(const char *a_expr,
 					       const char *b_expr,
+					       const char *eps_expr,
 					       const MatrixXcd& a,
 					       const MatrixXcd& b,
-					       double tol) {
+					       double eps) {
   if(a.cols() != b.cols() || a.rows() != b.rows()) {
     return ::testing::AssertionFailure()
       << a_expr << " and "  << b_expr << " are different size." << endl
@@ -50,12 +55,13 @@ static eps(pow(10.0, -12.0));
 
   for(int i = 0; i < a.rows(); i++) {
     for(int j = 0; j < a.cols(); j++) {
-      if(!ComplexIsNear(a(i,j),b(i,j),tol)) {
-	string str_a(a_expr);
+      if(!ComplexIsNear(a(i,j),b(i,j),eps)) {
+      string str_a(a_expr);
 	str_a += "(" + to_string(i) + "," + to_string(j)+ ")";
 	string str_b(a_expr);
 	str_b += "(" + to_string(i) + "," + to_string(j)+ ")";
-	auto resij = AssertComplexNear(str_a.c_str(), str_b.c_str(), a(i,j), b(i,j), tol);
+	auto resij = AssertComplexNear(str_a.c_str(), str_b.c_str(), eps_expr,
+				       a(i,j), b(i,j), eps);
 	if(!resij) {
 	  return resij;
 	}
@@ -68,11 +74,43 @@ static eps(pow(10.0, -12.0));
 					     const char *b_expr,
 					     const MatrixXcd& a,
 					     const MatrixXcd& b) {
-  return AssertMatrixXcdNear(a_expr, b_expr, a, b, eps);
+  return AssertMatrixXcdNear(a_expr, b_expr, "eps", a, b, eps);
+}
+::testing::AssertionResult AssertVectorXdNear(const char *a_expr,
+					      const char *b_expr,
+					      const char *eps_expr,
+					      const VectorXd& a,
+					      const VectorXd& b,
+					      double eps) {
+  if(a.size() != b.size() ) {
+    return ::testing::AssertionFailure()
+      << a_expr << " and "  << b_expr << " are different size." << endl
+      << a_expr << " : " << a.size() << endl
+      << b_expr << " : " << b.size() << endl;
+  }
+
+  for(int i = 0; i < a.rows(); i++) {
+    if(!ComplexIsNear(a(i),b(i),eps)) {
+      string str_a(a_expr);
+      str_a += "(" + to_string(i) + ")";
+      string str_b(b_expr);
+      str_b += "(" + to_string(i) + ")";
+      auto resij = AssertComplexNear(str_a.c_str(), str_b.c_str(), eps_expr,
+				     a(i), b(i), eps);
+      if(!resij) {
+	return resij;
+      }
+    }
+  }
+  return ::testing::AssertionSuccess();
+}
+::testing::AssertionResult AssertVectorXdEq(const char *a_expr,
+					     const char *b_expr,
+					     const VectorXd& a,
+					     const VectorXd& b) {
+  return AssertVectorXdNear(a_expr, b_expr, "eps", a, b, eps);
 }
 
-
-
-
+*/
 
 

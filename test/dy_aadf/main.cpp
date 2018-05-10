@@ -7,42 +7,62 @@
 using namespace std;
 using namespace qpbranch;
 
-TEST(utest_dy_aadf, test_first) {
+class TestMonoGauss : public ::testing::Test {
+protected:
+  int num;
+  DyAadf *dy_aadf;
+  DySetPoly *dy_old;
+  void SetUp() {
+    
+    // basic info
+    num = 1;
+    VectorXi ns(num); ns << 0;
+    
+    // system
+    complex<double> v0(0.225, 0.0);
+    complex<double> b  = 1.0;
+    complex<double> q0  = 0.0;
+    auto v = new OperatorGausspot(v0, b, q0);
+    double m = 2000.0;
+    
+    // AADF
+    dy_aadf = new DyAadf(v, ns, "thawed");
+    dy_aadf->alpha_ = 1.0;
+    dy_aadf->beta_ = 0.0;
+    dy_aadf->q0_ = -10.0;
+    dy_aadf->p0_ = 21.2312; // = sqrt(real(v0) *2.0*m)
+    dy_aadf->m_ = m;
+    dy_aadf->SetUp();
+    dy_aadf->UpdateBasis();
+    
+    // Ordinary
+    dy_old = new DySetPoly(v, ns, "thawed");
+    dy_old->gr0_ = 1.0/(4*dy_aadf->alpha_);
+    dy_old->gi0_ = dy_aadf->beta_;
+    dy_old->q0_  = dy_aadf->q0_;
+    dy_old->p0_  = dy_aadf->p0_;
+    dy_old->m_   = dy_aadf->m_;  
+    dy_old->SetUp();
+    dy_old->UpdateBasis();
+  }
+  void TearDown() {
+    delete dy_aadf;
+    delete dy_old;
+  }  
+};
 
-  // basic info
-  int num = 2;
-  VectorXi ns(num); ns << 0, 2;
+TEST_F(TestMonoGauss, Hamiltonian) {
 
-  // system
-  complex<double> v0(0.225, 0.0);
-  complex<double> b  = 1.0;
-  complex<double> q0  = 0.0;
-  auto v = new OperatorGausspot(v0, b, q0);
-  double m = 2000.0;
-
-  // AADF
-  auto aadf = new DyAadf(v, ns, "thawed");
-  aadf->alpha_ = 1.0;
-  aadf->beta_ = 0.0;
-  aadf->q0_ = -10.0;
-  aadf->p0_ = sqrt(real(v0) *2.0*m); // => 21.2132
-  aadf->p0_ = 21.2132;
-  aadf->m_ = m;
-  aadf->SetUp();
-
-  // Ordinary
-  auto dy = new DySetPoly(v, ns, "thawed");
-  dy->gr0_ = 1.0/(4*aadf->alpha_);
-  dy->gi0_ = aadf->beta_;
-  dy->q0_  = aadf->q0_;
-  dy->p0_  = aadf->p0_;
-  dy->m_   = aadf->m_;  
-  dy->SetUp();
-
-  // compare Hamiltonian
   MatrixXcd H1(num,num), H2(num,num);
-  aadf->Hamiltonian(aadf->id_, &H1);
-  dy->Hamiltonian(  dy->id_,   &H2);
+  dy_aadf->Hamiltonian(dy_aadf->id_, &H1);
+  dy_old->Hamiltonian( dy_old->id_,  &H2);
 
   EXPECT_MATRIXXCD_EQ(H1, H2);
+  
+}
+TEST_F(TestMonoGauss, Dotx) {
+  VectorXd dotx1(4), dotx2(4);
+  dy_aadf->DotxQhamilton(&dotx1);
+  dy_old->DotxQhamilton(&dotx2);
+  EXPECT_VECTORXD_NEAR(dotx1, dotx2, pow(10.0,-10));
 }
