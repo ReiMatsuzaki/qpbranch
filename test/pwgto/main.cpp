@@ -6,6 +6,7 @@
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/pwgto.hpp>
 #include <qpbranch/pwgto1c.hpp>
+#include <qpbranch/ppwgto.hpp>
 
 using namespace std;
 using namespace qpbranch;
@@ -308,9 +309,6 @@ TEST(utest_pwgto, test_gausspot) {
   
 }
 TEST(utest_pwgto, one_center) {
-
-  int num = 3;
-  VectorXi ns(num); ns << 0, 1, 2;
   
   complex<double> b(1.3);
   complex<double> v0(1.2);
@@ -330,6 +328,8 @@ TEST(utest_pwgto, one_center) {
   double R0 = 0.1;
   double P0 = 2.0;
   complex<double> g0(1.0,0.2);
+  int num = 3;
+  VectorXi ns(num); ns << 0, 1, 2;
   
   auto *pwgto   = new Pwgto(ns, ops);
   pwgto->ref_Rs() = VectorXd::Constant( num, R0);
@@ -386,5 +386,65 @@ TEST(utest_pwgto, one_center) {
 	" i :"   << i << endl;
     }
   }
+  
+}
+TEST(utest_pwgto, test_poly) {
+  
+  complex<double> b(1.3);
+  complex<double> v0(1.2);
+  complex<double> q0(0.0);
+  auto opid = new OperatorId();
+  auto opR1 = new OperatorRn(1);
+  auto opR2 = new OperatorRn(2);
+  auto opP1 = new OperatorPn(1);
+  auto opP2 = new OperatorPn(2);
+  auto opDR = new OperatorDa(kIdDR);
+  auto opDP = new OperatorDa(kIdDP);
+  auto opV  = new OperatorGausspot(v0, b, q0);
+  vector<Operator*> ops = {opid, opR1, opR2, opP1, opP2, opDR, opDP, opV};
+
+  double R0 = 0.1;
+  double P0 = 2.0;
+  complex<double> g0(1.0,0.2);
+  int num = 3;
+  VectorXi ns(num); ns << 0, 1, 2;
+    
+  auto *basis1 = new Pwgto1c(  ns, R0, P0, g0, ops);
+  basis1->SetUp();
+
+  vector<Poly> polys;
+  polys.push_back(Poly({{1.0, 0}}));
+  polys.push_back(Poly({{1.0, 1}}));
+  polys.push_back(Poly({{1.0, 2}}));
+  auto *basis2 = new PolyPwgto(polys, ops);
+  basis2->SetUp();
+  
+  double tol = pow(10.0, -12.0);
+
+  MatrixXcd M1(num,num);
+  MatrixXcd M2(num,num);
+  for(auto op1 : ops) {
+    for(auto op2 : ops) {
+      if(op1==opV)
+	continue;
+      basis1->Matrix(op1, op2, &M1);
+      basis2->Matrix(op1, op2, &M2);
+      for(int A = 0; A < num; A++) {
+	for(int B = 0; B < num; B++) {
+	  ASSERT_NEAR(M1(A,B).real(), M2(A,B).real(), tol) <<
+	    "op1:" << op1->str() << endl <<
+	    "op2:" << op2->str() << endl <<
+	    " A :" << A << endl <<
+	    " B :" << B << endl;
+	  ASSERT_NEAR(M1(A,B).imag(), M2(A,B).imag(), tol) <<
+	    "op1:" << op1->str() << endl <<
+	    "op2:" << op2->str() << endl <<
+	    " A :" << A << endl <<
+	    " B :" << B << endl;
+	}
+      }
+    }
+  }
+
   
 }

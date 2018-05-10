@@ -130,7 +130,7 @@ namespace qpbranch {
 	cumsum += cs[A]*cumsum1;
       }
       (*res)(ix) = cumsum;
-    }    
+    }
   }
   void OpBufBasic::Matrix(OpBuf *opbra, Pwgto1c *basis, MatrixXcd *res) {
     opbra->Matrix(this, basis, res);
@@ -213,15 +213,6 @@ namespace qpbranch {
       this->ns_[A][0] = ns[A];
     }
   }
-  OpBufId::OpBufId(const Polys& polys) : OpBufBasic(poly.size()) {
-    for(int A = 0; A < poly.size(); A++) {
-      const vector<pair<int, complex<double> > >& poly(polys(A));
-      this->InitZero(A, poly.size());
-      for(int i = 0; i < poly.size(); i++) {
-	this->ns_[A][i] = poly[i].first;
-      }
-    }
-  }
   void OpBufId::SetUp(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns()[A];
@@ -240,15 +231,6 @@ namespace qpbranch {
       this->ns_[A][0] = ns[A] + n;
     }
   }
-  OpBufRn::OpBufRn(const Polys& polys, int n): OpBufBasic(polys.size()), n_(n) {
-    for(int A = 0; A < num_; A++) {
-      const vector<pair<int, complex<double> > >& poly(polys(A));
-      this->InitZero(A, poly.size());
-      for(int i = 0; i < poly.size(); i++) {
-	this->ns_[A][i] = poly[i].first + n;
-      }
-    }
-  }
   void OpBufRn::SetUp(Pwgto *basis) {
     for(int A = 0; A < num_; A++) {
       ns_[A][0] = basis->ns()[A] + n_;
@@ -262,46 +244,6 @@ namespace qpbranch {
     }
   }  
   OpBufPn::OpBufPn(const VectorXi& ns, int n) : OpBufBasic(ns.size()), n_(n) {
-    
-    assert(n==1 || n==2);
-
-    for(int A = 0; A < num_; A++) {
-      int nA = ns(A);
-      vector<pair<int,complex<double> > > ncs;
-      if(n==1) {
-	if(nA == 0) {
-	  this->InitZero(A, 2);
-	  ns_[A][0] = nA+1;
-	  ns_[A][1] = nA;
-	} else {
-	  this->InitZero(A, 3);
-	  ns_[A][2] = nA-1;
-	}
-      } else if(n==2) {
-	if (nA == 0) {
-	  this->InitZero(A, 3);
-	  ns_[A][0] = nA+2;
-	  ns_[A][1] = nA+1;
-	  ns_[A][2] = nA;
-	} else if(nA == 1) {
-	  this->InitZero(A, 4);
-	  ns_[A][0] = nA+2;
-	  ns_[A][1] = nA+1;
-	  ns_[A][2] = nA;
-	  ns_[A][3] = nA-1;
-	} else {
-	  this->InitZero(A, 5);
-	  ns_[A][0] = nA+2;
-	  ns_[A][1] = nA+1;
-	  ns_[A][2] = nA;
-	  ns_[A][3] = nA-1;
-	  ns_[A][4] = nA-2;
-	}
-
-      }
-    }
-  }
-  OpBufPn::OpBufPn(const Polys& polys, int n) : OpBufBasic(polys.size()), n_(n) {
     
     assert(n==1 || n==2);
 

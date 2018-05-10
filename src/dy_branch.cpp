@@ -12,7 +12,7 @@ namespace qpbranch {
   using namespace std;
   using namespace mangan4;
 
-  DySetPoly::DySetPoly(Operator *pot, const VectorXi ns, string type_gauss) {
+  DySetPoly::DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss) {
 
     assert(type_gauss=="frozen"||type_gauss=="thawed");
 
@@ -114,33 +114,52 @@ namespace qpbranch {
     p0_ = p0_bak;
     this->UpdateBasis();
     Clam_ = U_.adjoint() * S * c_;
+
+    this->Hamiltonian(id_, &H);
+    cerr  << "E = " << (c_.dot(H*c_)).real() << endl; // => E = 0.11275
     
   }
+  //
+  // see 2018_aadf/0508_doc for detail.
+  // Assume the single gaussian trial function
+  //       G(q) = (1/2\pi\alpha)^{1/4} exp[-\gamma(q-q_0)^2 + ip_0(q-q_0)]
+  //       \gamma = 1/(4\alpha) + i\beta
+  // It can be proven that (q_0,p_0) and (\beta, \alpha) are canonical pair and satisfy
+  // Hamilton equation. 
+  //       \dot{\alpha} = -dH/d\beta
+  //       \dot{\beta}  = +dH/d\alpha
+  // In this program, orbital exponent are treated as its real(gr) and imaginary(gi) part.
+  // Time derivative of them are
+  //       \dot{gr} = d/dt (1/4\alpha)
+  //                = -1/(4\alpha^2) \dot{\alpha}
+  //                =  1/(4\alpha^2) dH/d\beta
+  //                =  4gr^2 dH/d(gi)
+  //       \dot{gi} = d\beta/dt
+  //                = +dH/d\alpha
+  //                = +dH/d(gr) d(gr)/d\alpha
+  //                = +dH/d(gr) (-1)/(4\alpha^)
+  //                = -4gr^2 dH/d(gr) 
   void DySetPoly::DotxQhamilton(VectorXd *res) {
     assert(is_setup_);
     
     MatrixXcd H(num_,num_);
     
     for(int iop = 0; iop < (int)ops_opt_.size(); iop++) {
-      double c;
-      Operator *op;
       if(ops_opt_[iop] == DR_) {
-	op = DP_;
-	c = 1;
+	this->Hamiltonian(DP_, &H);
+	(*res)[iop] = 2.0 * real(c_.dot(H*c_));
       } else if(ops_opt_[iop] == DP_) {
-	op = DR_;
-	c = -1;
+	this->Hamiltonian(DR_, &H);
+	(*res)[iop] = -2.0 * real(c_.dot(H*c_));
       } else if(ops_opt_[iop] == Dgr_) {
-	op = Dgi_;
-	c = 4.0*gr0_*gr0_;
+	this->Hamiltonian(Dgi_, &H);
+	(*res)[iop] = (4.0*gr0_*gr0_) * 2.0 * real(c_.dot(H*c_));
       } else if(ops_opt_[iop] == Dgi_) {
-	op = Dgr_;
-	c = 4.0*gr0_*gr0_;
+	this->Hamiltonian(Dgr_, &H);
+	(*res)[iop] = (-4.0*gr0_*gr0_) * 2.0 * real(c_.dot(H*c_));
       } else {
-	assert(false||"invalid op");
+	throw runtime_error("invalid iop");
       }      
-      this->Hamiltonian(op, &H);
-      (*res)[iop] = 2.0 * c * real(c_.dot(H*c_));
     }
     
   }
@@ -230,34 +249,115 @@ namespace qpbranch {
     }
     basis_->SetUp();
   }
-  void DySetPoly::DumpCon(int it) {
+  void DySetPoly::DumpCon(int it, string prefix) {
     Con& con = Con::getInstance();
     
     this->UpdateBasis();
     basis_->DumpCon(it);
-    
-    con.write_f1("c_re", it, c_.real());
-    con.write_f1("c_im", it, c_.imag());
 
-    con.write_f1("clam_re", it, Clam_.real());
-    con.write_f1("clam_im", it, Clam_.imag());
+    if(it==0) {
+      if(xs_.size()!=0) {
+	con.write_f1("_x", 0, xs_);
+      }
+    }
+    
+    con.write_f1(prefix+"c_re", it, c_.real());
+    con.write_f1(prefix+"c_im", it, c_.imag());
+
+    con.write_f1(prefix+"clam_re", it, Clam_.real());
+    con.write_f1(prefix+"clam_im", it, Clam_.imag());
 
     if(xs_.size()>0) {
       VectorXcd ys(xs_.size());;
       basis_->At(id_, c_, xs_, &ys);
-      con.write_f1("psi_re", it, ys.real());
-      con.write_f1("psi_im", it, ys.imag());
+      con.write_f1(prefix+"psi_re", it, ys.real());
+      con.write_f1(prefix+"psi_im", it, ys.imag());
       for(int lam = 0; lam < num_; lam++) {
 	VectorXcd c = U_.col(lam);
-	basis_->At(id_, c_, xs_, &ys);
-	string lbl = "phi" + to_string(lam);
+	basis_->At(id_, c, xs_, &ys);
+	string lbl = prefix + "phi" + to_string(lam);
 	con.write_f1(lbl + "_re", it, ys.real());
 	con.write_f1(lbl + "_im", it, ys.imag());
-      }
+      }      
     }
 
     double norm2 = Norm2();
     con.write_f("norm2", it, norm2);
   }
-  
+
+  /*
+  DyPsa::DyPsa(int max_path, Operator *pot, const VectorXi& ns, string type_gauss):
+    max_path_(max_path), ns_(ns)
+    type_gauss_(type_gauss), type_eomslow_("qhamilton"), m_(1.0), pot_(NULL),
+    dys_(max_path_), xs_(0) {
+
+    assert(ns.size()>0);
+    
+    for(int K = 0; K < max_apth_; K++) {
+      auto ptr = new DySetPoly(pot, ns, type_gauss);
+      dys_[K] = ptr;
+      psa_data_[ptr] = new PsaData(ns.size());
+    }
+
+  }
+  void DyPsa::SetUp() { }
+  void DyPsa::Update(double dt) {    
+    for(auto ptr_dy : dys_) {
+      PsaData *data = psa_data_[ptr_dy];
+      if(data->mode_ == kNone) {
+      } else if(data->mode_ == kStr) {
+	ptr_dy->Update(dt);
+      } else if(data->mode_ == kPsa) {
+	throw runtime_error("not impl");
+      } else {
+	throw runtime_error("not impl");
+      }
+    }
+  }
+  void DyPsa::DumpCon(int it) {
+    for(int K = 0; K < max_path_; K++) {
+      string prefix = to_string(K) + "_";
+      dys_[K]->DumpCon(it, prefix);
+    }
+  }
+  void DyPsa::AddPath(DySetPoly *dy, double q0, double p0, complex<double> g0, const VectorXcd& c) {
+    assert(psa_datas_.find(dy) != psa_data_.end());
+    assert(psa_datas_[dy]->mode_ == kNone);
+    
+    dy->m = m_;
+    dy->q0_ = q0;
+    dy->p0_ = p0;
+    dy->gr0_ = g0.real();
+    dy->gi0_ = g0.imag();
+    dy->c_ = c;
+    dy->type_eomslow_ = type_emoslow_;
+    dy->SetUp();
+
+    psa_datas_[dy]->mode_ = kSet;
+
+  }
+  void DyPsa::Branch(DySetPoly* path) {
+    assert(dys_.find(path)!=dys_.end());
+
+    auto q0 = path->q0_;
+    auto p0 = path->q0_;
+    complex<double> g0(path->gr0_, gi0= path->gi0_);
+    
+    int n(path->num_);
+    VectorXd w(n);
+    MatrixXcd H(n,n), S(n,n);
+
+    MatrixXcd& U = path->U_;
+    
+    path->c_ = U.col(0);
+    
+    for(int lam = 1; lam < n; lam++) {
+      this->AddPath(q0, p0, g0, U.col(lam));
+    }
+    
+  }
+  void DyPsa::set_xs(int nx, double x0, double x1) {
+    xs_ = VectorXd::LinSpaced(nx, x0, x1);
+  }  
+  */
 }

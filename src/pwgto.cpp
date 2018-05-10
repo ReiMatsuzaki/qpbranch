@@ -166,12 +166,14 @@ namespace qpbranch {
 
   }
   void Pwgto::DumpCon(int it) {
+    
     assert(is_setup_);
     Con& con = Con::getInstance();
     con.write_f1("R", it, Rs_);
     con.write_f1("P", it, Ps_);
     con.write_f1("gr", it, gs_.real());
     con.write_f1("gi", it, gs_.imag());
+
   }
 
 }

@@ -6,16 +6,13 @@ include ${QPBRANCH_ROOT}/conf.mk
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
 main.o: main.cpp
-
 main.x: LIBS+=${GTEST_LIBS}
-main.x: ${LIB}/libqpbranch.a ${LIB}/libgtest_main.a main.o
-	${CXX} main.o -o $@ -L${LIB} -lqpbranch -lgtest_main ${LIBS} ${LDFLAGS}
+main.x: main.o
 
-.PHONY: all
-
-all: main.x
+.PHONY: all clean
+all: libqpbranch libgtest_main main.x
 	${RM} -r _con
-	./$<
+	./main.x
 	cat _con/z/0001.json
 
 clean:

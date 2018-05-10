@@ -45,7 +45,7 @@ namespace qpbranch {
     vector<Operator*> ops_;
     // variable    
     VectorXcd gs_;
-    VectorXd Rs_, Ps_;    
+    VectorXd Rs_, Ps_;
     // intermediate
     bool is_setup_;
     map<Operator*, OpBuf*> buffer_map_;

@@ -3,6 +3,7 @@
 #include <string>
 #include <ostream>
 #include <cmath>
+#include <cassert>
 
 namespace qpbranch {
 
@@ -12,7 +13,10 @@ namespace qpbranch {
   using std::make_pair;
   using std::to_string;
   using std::ostream;
-  
+
+  // This class express Univariate polynomial
+  //      c0 x^n0 + c1 x^n1 + ...
+  // This class supports some arithmetic.
   template<class Field>
   class Univariate {
   private:
@@ -21,10 +25,12 @@ namespace qpbranch {
   public:
     typedef typename Data::iterator iterator;
     typedef typename Data::const_iterator const_iterator;
+    Univariate() {}
     Univariate(int num) : ncs_(num) {}
     Univariate(const Data& data) : ncs_(data) {}
     Univariate(const Univariate<Field>& o) : ncs_(o.ncs_) {}
     ~Univariate() {}
+    // Gives numerical value with substitution.
     const Field Sub(const Field& x) {
       Field cumsum(0);
       for(auto nc : ncs_) {
@@ -32,6 +38,7 @@ namespace qpbranch {
       }
       return cumsum;
     }
+    // Give short string expression
     string str() const {
       string buf;
       for(const_iterator it = begin(); it != end(); ++it) {	
@@ -46,21 +53,45 @@ namespace qpbranch {
       }
       return buf;
     }
+    // Below methods are vector methods.
     int size() const { return ncs_.size(); }
     void resize(int n) { ncs_.resize(n); }
     const_iterator begin() const { return ncs_.begin(); }
     const_iterator end() const { return ncs_.end(); }
     iterator begin() { return ncs_.begin(); }
     iterator end() { return ncs_.end(); }
+    // Arithmetric
     Univariate<Field>& operator+=(const Univariate<Field>& o) {
       for(auto it = o.begin(); it != o.end(); ++it) {
 	ncs_.push_back(make_pair(it->first, it->second));
       }
       return *this;
     }
+    Univariate<Field>& operator*=(const Field& c) {
+      for(auto it = begin(); it != end(); ++it) {
+	it->first *= c;
+      }
+      return *this;
+    }
+    Univariate<Field>& operator*=(const Univariate<Field>& o) {
+      Data orig;
+      this->ncs_.swap(orig);
+      for(auto it = orig.begin(); it != orig.end(); ++it) {
+	for(auto jt = o.begin(); jt != o.end(); ++jt) {
+	  ncs_.push_back(make_pair(it->first*jt->first, it->second+jt->second));
+	}
+      }
+      return *this;
+    }
+    Univariate<Field>  operator-() {
+      Univariate<Field> a(*this);
+      a.Negative();
+      return a;
+    }
     Univariate<Field>  operator-(const  Univariate<Field>& o) {
       Univariate<Field> a(o);
-      a.negative();
+      a.Negative();
+      a += *this;
       return a;
     }
     void Negative() {
@@ -68,7 +99,8 @@ namespace qpbranch {
 	it->first *= -Field(1);
       }
     }
-    Univariate<Field> Diff(int n) {
+    // calc
+    Univariate<Field> Diff(int n) const {
       assert(n>0);
 
       Univariate<Field> res(*this);
@@ -90,6 +122,14 @@ namespace qpbranch {
       }
       return res;
     }
+    int Order() const {
+      int res(0);
+      for(auto nc : ncs_) {
+	res = std::max(res, nc.second);
+      }
+      return res;
+    }
+    // Remove unnecessary data.
     void Refresh() {
 
       // reduce coefficients for same power
@@ -120,6 +160,18 @@ namespace qpbranch {
   Univariate<Field> operator+(const Univariate<Field>& a, const Univariate<Field>& b) {
     Univariate<Field> ab(a);
     ab += b;
+    return ab;
+  }
+  template<class Field>
+  Univariate<Field> operator*(const Field& c, const Univariate<Field>& a) {
+    Univariate<Field> ca(a);
+    ca *= c;
+    return ca;
+  }
+  template<class Field>
+  Univariate<Field> operator*(const Univariate<Field>& a, const Univariate<Field>& b) {
+    Univariate<Field> ab(a);
+    ab *= b;
     return ab;
   }
 }

@@ -30,6 +30,8 @@ DEPS:=${SRCS:%.cpp=${OBJ}/%.d}
 CXX=c++
 CXXFLAGS=-std=c++11 -MMD -MP -MF $(@:%.o=%.d)
 CPPFLAGS+=-I${INCLUDE} -I${EIGEN} -I${JSON11}
+LDFLAGS=-L${LIB}
+LIBS=-lqpbranch
 
 ifeq (${buildtype},release)
   CXXDEBUG=-O2 
@@ -39,20 +41,29 @@ else ifeq (${buildtype},debug)
   CXXFLAGS+=${CXXDEBUG} -Wall -Wextra
 endif
 
-# -- google test --
-GTEST_LIBS = -lpthread
-GTEST_CPPFLAGS = -isystem ${GTEST}/include -I${GTEST}/include -I${GTEST}
-
 # -- compile --
-%.x:
-	 @[ -d ${BIN} ] || mkdir -p ${BIN}
-	${CXX} $^ -o $@ ${LIBS} ${LDFLAGS}
 %.o: %.cpp 
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c $< -o $@
 
 ${OBJ}/%.o: ${SRC}/%.cpp
 	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c $< -o $@
+
+SRCS:=$(wildcard ${SRC}/*.cpp)
+OBJS:=$(addprefix ${OBJ}/, $(patsubst %.cpp,%.o,$(notdir ${SRCS})))
+${LIB}/libqpbranch.a: ${OBJS}
+	@[ -d ${LIB} ] || mkdir -p ${LIB}
+	${AR} ${ARFLAGS} $@ $^
+.PHONY: libqpbranch
+libqpbranch: ${LIB}/libqpbranch.a
+
+%.x:
+	 @[ -d ${BIN} ] || mkdir -p ${BIN}
+	${CXX} $^ -o $@ ${LIBS} ${LDFLAGS}
+
+# -- google test --
+GTEST_LIBS = -lpthread -lgtest_main
+GTEST_CPPFLAGS = -isystem ${GTEST}/include -I${GTEST}/include -I${GTEST}
 
 ${OBJ}/gtest-all.o: ${GTEST}/src/gtest-all.cc
 	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
@@ -63,17 +74,8 @@ ${OBJ}/gtest_main.o: ${GTEST}/src/gtest_main.cc
 ${LIB}/libgtest_main.a: ${OBJ}/gtest-all.o ${OBJ}/gtest_main.o
 	@[ -d ${LIB} ] || mkdir -p ${LIB}
 	${AR} ${ARFLAGS} $@ $^
-
-${OBJ}/json11.o: ${JSON11}/json11.cpp
-	@[ -d ${OBJ} ] || mkdir -p ${OBJ}
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c -o $@ $<
-
-SRCS:=$(wildcard ${SRC}/*.cpp) ${JSON11}/json11.cpp
-#OBJS=$(addprefix ${OBJ}/, json11.o mathplus.o eigenplus.o operator.o pwgto_buf.o pwgto1c.o pwgto.o)
-OBJS:=$(addprefix ${OBJ}/, $(patsubst %.cpp,%.o,$(notdir ${SRCS})))
-${LIB}/libqpbranch.a: ${OBJS}
-	@[ -d ${LIB} ] || mkdir -p ${LIB}
-	${AR} ${ARFLAGS} $@ $^
+.PHONY: libgtest_main
+libgtest_main: ${LIB}/libgtest_main.a
 
 # -- command --
 .PHONY: check calc clean_all clean_part

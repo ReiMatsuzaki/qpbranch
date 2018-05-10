@@ -1,7 +1,7 @@
 include ../../local.mk
 include ${QPBRANCH_ROOT}/conf.mk
 
--include main.d
+-include ${main.d}
 
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
