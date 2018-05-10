@@ -7,8 +7,6 @@ namespace qpbranch {
   
   DyAadf::DyAadf(Operator *pot, const VectorXi& ns, string type_gauss) {
     assert(type_gauss=="frozen"||type_gauss=="thawed");
-    assert(ns.size()==1);
-    assert(ns[0]==0);
 
     num_ = ns.size();
 

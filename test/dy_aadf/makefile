@@ -7,11 +7,11 @@ main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
 main.o: main.cpp
 main.x: LIBS+=${GTEST_LIBS}
-main.x: main.o
+main.x: main.o ${libqpbranch} ${libgtest_main} 
 
 .PHONY: all clean
-all: libqpbranch libgtest_main main.x
-	./main.x
+all: main.x
+	./$<
 clean:
 	${RM} *.x *.o *.d
 

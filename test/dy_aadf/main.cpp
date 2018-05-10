@@ -1,5 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
+#include <qpbranch/gtestplus.hpp>
 #include <qpbranch/dy_branch.hpp>
 #include <qpbranch/dy_aadf.hpp>
 
@@ -43,7 +44,5 @@ TEST(utest_dy_aadf, test_first) {
   aadf->Hamiltonian(aadf->id_, &H1);
   dy->Hamiltonian(  dy->id_,   &H2);
 
-  cerr << H1 << endl;
-  cerr << H2 << endl;
-  
+  EXPECT_MATRIXXCD_EQ(H1, H2);
 }
