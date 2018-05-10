@@ -1,11 +1,12 @@
 #include <qpbranch/pwgto.hpp>
 #include <qpbranch/dy_aadf.hpp>
 #include <qpbranch/con.hpp>
+#include <qpbranch/eigenplus.hpp>
 
 namespace qpbranch {
   using mangan4::Con;
   
-  DyAadf::DyAadf(Operator *pot, const VectorXi& ns, string type_gauss) {
+  DyAadf::DyAadf(OperatorPot *pot, const VectorXi& ns, string type_gauss) {
     assert(type_gauss=="frozen"||type_gauss=="thawed");
 
     num_ = ns.size();
@@ -26,11 +27,13 @@ namespace qpbranch {
     is_setup_ = false;
 
     pot_ = pot;
-    id_  = new OperatorId();
-    p2_  = new OperatorPn(2);
+    id_ = new OperatorId();
+    p2_ = new OperatorPn(2);
+    r1_ = new OperatorRn(1);
+    r2_ = new OperatorRn(2);
     DR_ = new OperatorDa(kIdDR);
     DP_ = new OperatorDa(kIdDP);
-    vector<Operator*> ops = {id_, pot_, p2_, DR_, DP_};
+    vector<Operator*> ops = {id_, pot_, p2_, DR_, DP_, r1_, r2_};
     if(type_gauss == "frozen") {
       Dgr_ = nullptr;
       Dgi_ = nullptr;
@@ -60,10 +63,11 @@ namespace qpbranch {
 
     this->UpdateBasis();
 
+    // time derivative of nonlinear parameters
     VectorXd dotx(4);
     this->DotxQhamilton(&dotx);
-    //    cerr << dotx[0] << " " << dotx[1] << " " << dotx[2] << " " << dotx[3] << endl;
 
+    // propagate variables
     q0_ += dotx(0) * dt;
     p0_ += dotx(1) * dt;
     if(type_gauss_=="thawed") {
@@ -71,9 +75,6 @@ namespace qpbranch {
       beta_  += dotx(3) *dt;
     }
     
-    //    MatrixXcd H(num_,num_);
-    //    this->Hamiltonian(id_, &H);
-    //    cerr  << "E = " << (c_.dot(H*c_)).real() << endl; // => E = 0.112562
   }
   //
   // see 2018_aadf/0508_doc for detail.
@@ -133,16 +134,26 @@ namespace qpbranch {
       cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type gauss" << endl; abort();
     }
   }
+  void DyAadf::HamiltonianForF(Operator *op, MatrixXcd *res) {
+    assert(is_setup_);
+    MatrixXcd P2(num_,num_), V(num_,num_);
+    basis_->Matrix(op, p2_,  &P2);
+    basis_->Matrix(op, pot_, &V );
+    *res = 1.0/(2*m_) * P2 + V;
+  }
   void DyAadf::Hamiltonian(Operator *op, MatrixXcd *res) {
     assert(is_setup_);
 
-    MatrixXcd S(num_, num_), P2(num_, num_), V(num_,num_);
+    MatrixXcd S(num_, num_), R1(num_,num_), R2(num_,num_), HF(num_,num_);
     basis_->Matrix(op, id_,  &S );
-    basis_->Matrix(op, p2_,  &P2);
-    basis_->Matrix(op, pot_, &V );
+    basis_->Matrix(op, r1_,  &R1 );
+    basis_->Matrix(op, r2_,  &R2 );
+    this->HamiltonianForF(op, &HF);
 
-    MatrixXcd dS2 = (p0_*p0_ + 4*beta_*beta_*alpha_) * S;    
-    *res = 1.0/(2*m_) * (dS2 + P2) + V;
+    *res = 1.0/(2*m_)*( p0_*p0_*S +
+			-2*p0_*beta_*R1 +
+			4*beta_*beta_*R2) + HF;
+
   }
   void DyAadf::ShiftVar(int var_id, double dx) {
     if(var_id==0) 
@@ -175,14 +186,18 @@ namespace qpbranch {
     basis_->DumpCon(it);
 
     if(it==0) {
+      con.write_i("_num", 0, num_);
+      /*
       if(xs_.size()!=0) {
 	con.write_f1("_x", 0, xs_);
+	VectorXcd ys(xs_.size());
+	pot_->At(xs_, &ys);
+	con.write_f1("_v", 0, ys.real());
       }
+      */
     }
 
-    con.write_f1(prefix+"c_re", it, c_.real());
-    con.write_f1(prefix+"c_im", it, c_.imag());
-
+    /*
     if(xs_.size()>0) {
       VectorXd d = xs_.array() - q0_;
       VectorXcd Fs(xs_.size());;
@@ -192,16 +207,12 @@ namespace qpbranch {
       auto ys = Fs.array() * iSs.array().exp();
       con.write_f1(prefix+"psi_re", it, ys.real());
       con.write_f1(prefix+"psi_im", it, ys.imag());
-      /*
-      for(int lam = 0; lam < num_; lam++) {
-	VectorXcd c = U_.col(lam);
-	basis_->At(id_, c, xs_, &ys);
-	string lbl = prefix + "phi" + to_string(lam);
-	con.write_f1(lbl + "_re", it, ys.real());
-	con.write_f1(lbl + "_im", it, ys.imag());
-      }
-      */
     }
+    */
+
+    con.write_f1(prefix+"c_re", it, c_.real());
+    con.write_f1(prefix+"c_im", it, c_.imag());
+
 
     double norm2 = Norm2();
     con.write_f("norm2", it, norm2);

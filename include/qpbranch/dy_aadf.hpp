@@ -27,24 +27,27 @@ namespace qpbranch {
     double m_;
     // options
     string type_gauss_;
-    VectorXd xs_;
-    // intermediate
+    /*VectorXd xs_;*/
+    // intermediate    
     bool is_setup_;
-    Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
+    OperatorPot *pot_;
+    Operator *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_, *r1_, *r2_;
     Pwgto *basis_;
     // Main
-    DyAadf(Operator *pot, const VectorXi& ns, string type_gauss);
+    DyAadf(OperatorPot *pot, const VectorXi& ns, string type_gauss);
     void SetUp();
     void Update(double dt);
     // Accessor
-    void set_xs(int nx, double x0, double x1) { xs_=VectorXd::LinSpaced(nx,x0,x1); }
+    /*void set_xs(int nx, double x0, double x1) { xs_=VectorXd::LinSpaced(nx,x0,x1); }*/
     // calc
     void DotxQhamilton(VectorXd *res);
     void DotxQuantum(bool is_tdvp, VectorXd *res);
+    // calculate AADF hamiltonian for fast motion F.
+    //      H^F_{ij} = <Gi| (1/2m) p^2 + V | Gj>
+    void HamiltonianForF(Operator *op, MatrixXcd *res);
     // calculate AADF hamiltonian matrix
-    //     H_{ij} = (1/2)<Gi|(dS/dq)^2|Gj> + <Gi|-(1/2)(d/dq)^2 + V|Gj>
-    //            = (1/2)<Gi|(p0-2\beta(q-q0))^2|Gj> + <Gi|-(1/2)(d/dq)^2 + V|Gj>
-    //            = ((p0^2)/2 + 2\beta^2\alpha)S_{ij} + <Gi|-(1/2)(d/dq)^2 + V|Gj>
+    //     H_{ij} = (1/2)<Gi|(dS/dq)^2|Gj> + <Gi|H^F|Gj>
+    //            = (1/2)<Gi|(p0-2\beta(q-q0))^2|Gj> + <Gi|H^F|Gj>
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
     void EffHamiltonian(const VectorXd& dotx, MatrixXcd *res);
     double Norm2() const;
