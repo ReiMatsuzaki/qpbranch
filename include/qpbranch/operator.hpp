@@ -2,6 +2,7 @@
 #define OPERATOR_HPP_
 
 #include <complex>
+#include <boost/math/interpolators/cubic_b_spline.hpp>
 #include <Eigen/Core>
 
 namespace qpbranch {
@@ -42,7 +43,7 @@ namespace qpbranch {
   };
   class OperatorPot : public Operator {
   public:
-    virtual void At(const VectorXd& xs, VectorXcd *res) = 0;
+    virtual void At(const VectorXd& xs, VectorXcd *res) const = 0;
     virtual string str() const = 0;
   };
   class OperatorGausspot : public OperatorPot {
@@ -53,9 +54,15 @@ namespace qpbranch {
     complex<double> q0() const { return q0_; }
     OperatorGausspot(complex<double> v0, complex<double> b, complex<double> q0):
       v0_(v0), b_(b), q0_(q0) {}
-    void At(const VectorXd& xs, VectorXcd *res);
+    void At(const VectorXd& xs, VectorXcd *res) const;
     string str() const;
   };
-
+  class OperatorSpline : public OperatorPot {
+    boost::math::cubic_b_spline<double> *spline_;
+  public:
+    OperatorSpline(const VectorXd& xs, const VectorXd& ys);
+    void At(const VectorXd& xs, VectorXcd *res) const;
+    string str() const;
+  };
 }
 #endif

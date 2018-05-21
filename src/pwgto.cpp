@@ -71,17 +71,16 @@ namespace qpbranch {
       return 1.0/(2.0*gAB)*res0 + (wAB-RB)*res1 + (Nk+1.0)*res2;
     }    
   }
- 
-  Pwgto::Pwgto(const VectorXi& ns, const vector<Operator*>& ops):
+  Pwgto::Pwgto(const VectorXi& ns, const vector<Operator*>& ops, int norder, double dx):
     num_(ns.size()), nop_(ops.size()), ns_(ns), ops_(ops),
-    gs_(num_), Rs_(num_), Ps_(num_), is_setup_(false),
+    gs_(num_), Rs_(num_), Ps_(num_), norder_(norder), dx_(dx), is_setup_(false),
     Ns_(num_), maxn_(num_),
     gAB_(num_,num_), eAB_(num_,num_), hAB_(num_,num_), RAB_(num_,num_) {
 
     // allocate buffer for each operator
     for(auto it = ops.begin(); it!=ops.end(); ++it) {
       Operator *op = *it;
-      auto ptr = MakeOpBuf(ns, op);
+      auto ptr = MakeOpBuf(this, op);
       buffer_map_[op] = ptr;
     }
 
@@ -95,7 +94,6 @@ namespace qpbranch {
       }
       maxn_[A] = maxn;
     }
-
     // allocate coefficient d
     d_ = new multi_array< multi_array<complex<double>,3>*, 2>(extents[num_][num_]);
     for(int A = 0; A < num_; A++) {

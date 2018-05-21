@@ -46,6 +46,9 @@ namespace qpbranch {
     // variable    
     VectorXcd gs_;
     VectorXd Rs_, Ps_;
+    // calculation condition
+    int norder_;  // order for finite difference
+    double dx_;   // finite difference for     
     // intermediate
     bool is_setup_;
     map<Operator*, OpBuf*> buffer_map_;
@@ -56,7 +59,7 @@ namespace qpbranch {
     MatrixXcd gAB_, eAB_, hAB_,  RAB_;    
   public:
     // Main
-    Pwgto(const VectorXi& ns, const vector<Operator*>& ops);
+    Pwgto(const VectorXi& ns, const vector<Operator*>& ops, int norder=-1, double dx=0.01);
     ~Pwgto() {}
     int num() const { return num_; }
     int nop() const { return nop_; }
@@ -69,6 +72,8 @@ namespace qpbranch {
     VectorXcd& ref_gs() { return gs_; }
     VectorXd&  ref_Rs() { return Rs_; }
     VectorXd&  ref_Ps() { return Ps_; }
+    int norder() const { return norder_; }
+    double dx() const { return dx_; }
     void SetUp();
     int size() const { return num_; }
     void Matrix(Operator *ibra, Operator *iket, MatrixXcd *res);

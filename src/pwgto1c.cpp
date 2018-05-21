@@ -11,7 +11,7 @@ namespace qpbranch {
 
     for(auto it = ops.begin(); it != ops.end(); ++it) {
       auto op = *it;
-      buf_map_[op] = MakeOpBuf(ns, op);
+      buf_map_[op] = MakeOpBuf(this, op);
     }
 
     maxn_ = 0;

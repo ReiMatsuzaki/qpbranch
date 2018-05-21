@@ -20,7 +20,8 @@ namespace qpbranch {
   class OpBufGausspot;
 
   // factory function for buffer
-  OpBuf* MakeOpBuf(const VectorXi& ns, Operator *op);
+  OpBuf* MakeOpBuf(Pwgto *basis, Operator *op);
+  OpBuf* MakeOpBuf(Pwgto1c *basis, Operator *op);
 
   // Buffer for each operator applying Pwgto or Pwgto1c.
   class OpBuf {
@@ -123,7 +124,16 @@ namespace qpbranch {
     void Matrix(OpBufBasic *opket, Pwgto1c *basis, MatrixXcd *res);
     void Matrix(OpBufGausspot *opket, Pwgto1c *basis, MatrixXcd *res);
     void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-  };    
+  };
+  // Buffer for numerical potential
+  class OpBufSpline : public OpBufBasic {    
+    OperatorSpline *op_;
+  public:
+    OpBufSpline(const VectorXi& ns, int norder, OperatorSpline *op);
+    OperatorSpline *op() const { return op_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
+  };
 }
 
 #endif

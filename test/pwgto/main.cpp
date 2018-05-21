@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <qpbranch/gtestplus.hpp>
 #include <qpbranch/mathplus.hpp>
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/pwgto.hpp>
@@ -389,6 +390,8 @@ TEST(utest_pwgto, one_center) {
   
 }
 TEST(utest_pwgto, test_poly) {
+
+  /*
   
   complex<double> b(1.3);
   complex<double> v0(1.2);
@@ -446,5 +449,44 @@ TEST(utest_pwgto, test_poly) {
     }
   }
 
+  */
   
 }
+TEST(utest_pwgto, test_spline) {
+
+  auto k = 1.0;
+  VectorXd xs = VectorXd::LinSpaced(100, -5.0, 5.0);
+  VectorXd ys = k/2*(xs.array()*xs.array());
+  auto op_v = new OperatorSpline(xs, ys);
+
+  auto id = new OperatorId();
+  auto R2 = new OperatorRn(2);
+  vector<Operator*> ops = {id, op_v, R2};
+
+  int num(2);
+  VectorXi ns(num); ns << 0, 2;
+  
+  auto *basis = new Pwgto(ns, ops, 0, 0.01);  
+  basis->ref_gs() << 1.0, 1.2;
+  basis->ref_Rs() << 0.0, 0.0;
+  basis->ref_Ps() << 0.0, 0.0;
+  basis->SetUp();
+
+  MatrixXcd M1(num, num);
+  basis->Matrix(id, op_v, &M1);
+  EXPECT_NEAR(abs(M1(0,0)), 0.0, pow(10.0, -12.0));
+
+  auto *basis2 = new Pwgto(ns, ops, 2, 0.01);  
+  basis2->ref_gs() << 1.0, 1.2;
+  basis2->ref_Rs() << 0.0, 0.0;
+  basis2->ref_Ps() << 0.0, 0.0;
+  basis2->SetUp();
+
+  MatrixXcd M2(num, num);
+  basis2->Matrix(id, op_v, &M1);
+  basis2->Matrix(id, R2,   &M2);
+  M2 *= (k/2);
+
+  EXPECT_MATRIXXCD_NEAR(M1, M2, pow(10.0, -10.0));
+}
+

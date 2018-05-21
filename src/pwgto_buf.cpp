@@ -8,7 +8,8 @@ using namespace std;
 
 namespace qpbranch {
 
-  OpBuf* MakeOpBuf(const VectorXi& ns, Operator *op) {
+  OpBuf* MakeOpBuf(Pwgto *basis, Operator *op) {
+    const VectorXi& ns = basis->ns();
     const type_info& optype = typeid(*op);
     if(optype == typeid(OperatorId)) {
       return new OpBufId(ns);
@@ -21,6 +22,9 @@ namespace qpbranch {
     } else if(optype == typeid(OperatorDa)) {
       auto opop = static_cast<OperatorDa*>(op);
       return new OpBufDa(ns, opop->id());
+    } else if(optype == typeid(OperatorSpline)) {
+      auto opop = static_cast<OperatorSpline*>(op);
+      return new OpBufSpline(ns, basis->norder(), opop);
     } else if(optype == typeid(OperatorGausspot)) {
       auto opop = static_cast<OperatorGausspot*>(op);
       return new OpBufGausspot(ns, opop);
@@ -29,7 +33,31 @@ namespace qpbranch {
       abort();
     }
   }
-  
+  OpBuf* MakeOpBuf(Pwgto1c *basis, Operator *op) {
+    const VectorXi& ns = basis->ns();
+    const type_info& optype = typeid(*op);
+    if(optype == typeid(OperatorId)) {
+      return new OpBufId(ns);
+    } else if(optype == typeid(OperatorRn)) {
+      auto opop = static_cast<OperatorRn*>(op);
+      return new OpBufRn(ns, opop->n());
+    } else if(optype == typeid(OperatorPn)) {
+      auto opop = static_cast<OperatorPn*>(op);
+      return new OpBufPn(ns, opop->n());
+    } else if(optype == typeid(OperatorDa)) {
+      auto opop = static_cast<OperatorDa*>(op);
+      return new OpBufDa(ns, opop->id());
+    } else if(optype == typeid(OperatorSpline)) {
+      auto opop = static_cast<OperatorSpline*>(op);
+      return new OpBufSpline(ns, 0, opop);
+    } else if(optype == typeid(OperatorGausspot)) {
+      auto opop = static_cast<OperatorGausspot*>(op);
+      return new OpBufGausspot(ns, opop);
+    } else {
+      cerr << "Unsupported operator" << endl;
+      abort();
+    }
+  }
   
   // give difference of normalization term
   //     (d/d(Re[g]))^(nd)N(t)
@@ -205,7 +233,6 @@ namespace qpbranch {
       (*res)(ix) = cumsum;
     }    
   }
-
   
   OpBufId::OpBufId(const VectorXi& ns) : OpBufBasic(ns.size()) {
     for(int A = 0; A < num(); A++) {
@@ -461,7 +488,72 @@ namespace qpbranch {
       }
     }
   }
+  OpBufSpline::OpBufSpline(const VectorXi& ns, int norder, OperatorSpline *op): OpBufBasic(ns.size()), op_(op)  {
 
+    assert(0<=norder && norder<=2);
+    
+    for(int A = 0; A < ns.size(); A++) {
+      this->InitZero(A, norder+1);
+      int nA = ns[A];
+      for(int i = 0; i < norder+1; i++) 
+	ns_[A][i] = nA + i;      
+    }
+  }
+  void OpBufSpline::SetUp(Pwgto *basis) {
+    int norder = basis->norder();
+    assert(0<=norder && norder<=2);
+    double dx = basis->dx();
+    for(int A = 0; A < basis->num(); A++) {
+
+      auto nA = basis->ns()[A];
+      auto NA = basis->Ns()[A];
+
+      // principle number
+      for(int i = 0; i < basis->norder(); i++) {
+	ns_[A][i] = nA+i;
+      }
+
+      // numerical derivative
+      VectorXd xs(3);
+      VectorXcd ys(3);
+      xs(1) = basis->Rs()[A];
+      xs(0) = xs(1)-dx;
+      xs(2) = xs(1)+dx;
+      op_->At(xs, &ys);
+      cs_[A][0]   = NA * ys(1);
+      if(norder>0)
+	cs_[A][1] = NA * (ys(2)-ys(0))/(2*dx);
+      if(norder>1)
+	cs_[A][2] = NA/2 * (ys(2)+ys(0)-2.0*ys(1))/(dx*dx);
+    }
+  }
+  void OpBufSpline::SetUp(Pwgto1c *basis) {
+
+    double dx = 0.01;
+    int norder = 2;
+    
+    for(int A = 0; A < basis->num_; A++) {
+
+      auto nA = basis->ns_[A];
+
+      // principle number
+      for(int i = 0; i < norder; i++) {
+	ns_[A][i] = nA+i;
+      }
+
+      // numerical derivative
+      VectorXd xs(3);
+      VectorXcd ys(3);
+      xs(1) = basis->R0_;
+      xs(0) = xs(1)-dx;
+      xs(2) = xs(1)+dx;
+      op_->At(xs, &ys);
+      cs_[A][0] = ys(1);
+      cs_[A][1] = (ys(2)-ys(0))/(2*dx);
+      cs_[A][2] = (ys(2)+ys(0)-2.0*ys(1))/(dx*dx);
+    }
+  }
+  
   OpBufGausspot::OpBufGausspot(const VectorXi& ns, OperatorGausspot *op) : num_(ns_.size()),
 									   ns_(ns), op_(op) {}  
   int OpBufGausspot::Maxn(int A) { return ns_(A); }
