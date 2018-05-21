@@ -27,8 +27,8 @@ protected:
     
     // AADF
     dy_aadf = new DyAadf(v, ns, "thawed");
-    dy_aadf->alpha_ = 1.0;
-    dy_aadf->beta_ = 0.0;
+    dy_aadf->rho_ = 1.0;
+    dy_aadf->lambda_ = 0.0;
     dy_aadf->q0_ = -10.0;
     dy_aadf->p0_ = 21.2312; // = sqrt(real(v0) *2.0*m)
     dy_aadf->m_ = m;
@@ -37,8 +37,8 @@ protected:
     
     // Ordinary
     dy_old = new DySetPoly(v, ns, "thawed");
-    dy_old->gr0_ = 1.0/(4*dy_aadf->alpha_);
-    dy_old->gi0_ = dy_aadf->beta_;
+    dy_old->gr0_ = 1.0/(4*pow(dy_aadf->rho_, 2));
+    dy_old->gi0_ = -dy_aadf->lambda_/(2*dy_aadf->rho_);
     dy_old->q0_  = dy_aadf->q0_;
     dy_old->p0_  = dy_aadf->p0_;
     dy_old->m_   = dy_aadf->m_;  
@@ -51,6 +51,16 @@ protected:
   }  
 };
 
+TEST_F(TestMonoGauss, At) {
+
+  int nx = 2;
+  VectorXd xs(nx); xs << 0.3, 0.4;
+  VectorXcd cs(num); cs << 1.0;
+  VectorXcd y1s(nx), y2s(nx);
+  dy_aadf->basis_->At(dy_aadf->id_, cs, xs, &y1s);
+  dy_old->basis_->At( dy_aadf->id_, cs, xs, &y2s);
+  EXPECT_VECTORXCD_EQ(y1s, y2s);
+}
 TEST_F(TestMonoGauss, Hamiltonian) {
 
   MatrixXcd H1(num,num), H2(num,num);

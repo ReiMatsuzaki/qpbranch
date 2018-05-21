@@ -13,8 +13,8 @@ namespace qpbranch {
 
     q0_ = 0.0;
     p0_ = 0.0;
-    alpha_ = 1.0;
-    beta_ = 0.0;
+    rho_ = 1.0;
+    lambda_ = 0.0;
     theta_ = 0.0;
 
     c_ = VectorXcd::Zero(num_);
@@ -71,30 +71,11 @@ namespace qpbranch {
     q0_ += dotx(0) * dt;
     p0_ += dotx(1) * dt;
     if(type_gauss_=="thawed") {
-      alpha_ += dotx(2) *dt;
-      beta_  += dotx(3) *dt;
+      rho_ += dotx(2) *dt;
+      lambda_  += dotx(3) *dt;
     }
     
   }
-  //
-  // see 2018_aadf/0508_doc for detail.
-  // Assume the single gaussian trial function
-  //       G(q) = (1/2\pi\alpha)^{1/4} exp[-\gamma(q-q_0)^2 + ip_0(q-q_0)]
-  //       \gamma = 1/(4\alpha) + i\beta
-  // It can be proven that (q_0,p_0) and (\beta, \alpha) are canonical pair and satisfy
-  // Hamilton equation. 
-  //       \dot{\alpha} = -dH/d\beta
-  //       \dot{\beta}  = +dH/d\alpha
-  // In this program, orbital exponent are treated as its real(gr) and imaginary(gi) part.
-  // Time derivative of them are
-  //       \dot{gr} = d/dt (1/4\alpha)
-  //                = -1/(4\alpha^2) \dot{\alpha}
-  //                =  1/(4\alpha^2) dH/d\beta
-  //                =  1/(4\alpha^2) dH/d(gi)
-  //       \dot{gi} = d\beta/dt
-  //                = +dH/d\alpha
-  //                = +dH/d(gr) d(gr)/d\alpha
-  //                = -1/(4\alpha^2) dH/d(gr) 
   void DyAadf::DotxQhamilton(VectorXd *res) {
     assert(is_setup_);
     assert(res->size()==4);
@@ -128,8 +109,8 @@ namespace qpbranch {
       (*res)[2] = 0.0;
       (*res)[3] = 0.0;
     } else if(type_gauss_=="thawed") {
-      (*res)[2] = -dH[3]; // dot{alpha} = -dH/d\beta
-      (*res)[3] = +dH[2]; // dot{beta}  = +dH/d\alpha
+      (*res)[2] = -dH[3]; // dot{rho}    = +dH/d\lambda
+      (*res)[3] = +dH[2]; // dot{lambda} = -dH/d\rho
     } else {
       cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type gauss" << endl; abort();
     }
@@ -151,8 +132,8 @@ namespace qpbranch {
     this->HamiltonianForF(op, &HF);
 
     *res = 1.0/(2*m_)*( p0_*p0_*S +
-			-2*p0_*beta_*R1 +
-			4*beta_*beta_*R2) + HF;
+			-2*p0_*lambda_/rho_*R1 +
+			pow(lambda_/rho_,2)*R2) + HF;
 
   }
   void DyAadf::ShiftVar(int var_id, double dx) {
@@ -161,9 +142,9 @@ namespace qpbranch {
     else if(var_id==1)
       this->p0_ += dx;
     else if(var_id==2)
-      this->alpha_ += dx;
+      this->rho_ += dx;
     else if(var_id==3)
-      this->beta_ += dx;
+      this->lambda_ += dx;
     else {
       cerr << __FILE__ << ":" << __LINE__ << ": Error invalid var_id." << endl;
       cerr << "var_id: " << var_id << endl;
@@ -175,44 +156,24 @@ namespace qpbranch {
     for(int i = 0; i < num_; i++) {
       basis_->ref_Rs()(i) = q0_;
       basis_->ref_Ps()(i) = 0.0;
-      basis_->ref_gs()(i) = complex<double>(1/(4*alpha_), beta_);
+      basis_->ref_gs()(i) = complex<double>(1/(4*rho_*rho_), -lambda_/(2*rho_));
     }
     basis_->SetUp();
   }
   void DyAadf::DumpCon(int it, string prefix) {
     Con& con = Con::getInstance();
 
-    this->UpdateBasis();
-    basis_->DumpCon(it);
+    con.write_f("q0",     it, q0_);
+    con.write_f("p0",     it, q0_);
+    con.write_f("rho",    it, rho_);
+    con.write_f("lambda", it, lambda_);
 
     if(it==0) {
       con.write_i("_num", 0, num_);
-      /*
-      if(xs_.size()!=0) {
-	con.write_f1("_x", 0, xs_);
-	VectorXcd ys(xs_.size());
-	pot_->At(xs_, &ys);
-	con.write_f1("_v", 0, ys.real());
-      }
-      */
     }
-
-    /*
-    if(xs_.size()>0) {
-      VectorXd d = xs_.array() - q0_;
-      VectorXcd Fs(xs_.size());;
-      basis_->At(id_, c_, xs_, &Fs);
-      VectorXcd iSs(xs_.size());
-      iSs = complex<double>(0,1) * (p0_*d.array() - beta_*d.array().pow(2));
-      auto ys = Fs.array() * iSs.array().exp();
-      con.write_f1(prefix+"psi_re", it, ys.real());
-      con.write_f1(prefix+"psi_im", it, ys.imag());
-    }
-    */
 
     con.write_f1(prefix+"c_re", it, c_.real());
     con.write_f1(prefix+"c_im", it, c_.imag());
-
 
     double norm2 = Norm2();
     con.write_f("norm2", it, norm2);

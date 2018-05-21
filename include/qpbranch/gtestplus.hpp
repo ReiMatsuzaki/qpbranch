@@ -82,11 +82,12 @@ AssertMatrixEqual(const char *a_expr,
 						const Eigen::MatrixXcd& a, const Eigen::MatrixXcd& b) {
   return AssertMatrixEqual<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>(a_expr, b_expr, a, b);
 }
-#define EXPECT_MATRIXXCD_EQ(a, b) EXPECT_PRED_FORMAT2(       AssertMatrixXcdEqual, a, b);
+
 ::testing::AssertionResult AssertMatrixXcdNear(const char *a_expr, const char *b_expr, const char *eps_expr,
 					       const Eigen::MatrixXcd& a, const Eigen::MatrixXcd& b, double eps) {
   return AssertMatrixNear<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>(a_expr, b_expr, eps_expr, a, b, eps);
 }
+#define EXPECT_MATRIXXCD_EQ(a, b) EXPECT_PRED_FORMAT2(       AssertMatrixXcdEqual, a, b);
 #define EXPECT_MATRIXXCD_NEAR(a, b, eps) EXPECT_PRED_FORMAT3(AssertMatrixXcdNear, a, b, eps);
 
 
@@ -95,12 +96,25 @@ AssertMatrixEqual(const char *a_expr,
 						const Eigen::VectorXd& a, const Eigen::VectorXd& b) {
   return AssertMatrixEqual<double,Eigen::Dynamic,1>(a_expr, b_expr, a, b);
 }
-#define EXPECT_MATRIXXCD_EQ(a, b) EXPECT_PRED_FORMAT2(       AssertMatrixXcdEqual, a, b);
+
 ::testing::AssertionResult AssertVectorXdNear(const char *a_expr, const char *b_expr, const char *eps_expr,
 					      const Eigen::VectorXd& a, const Eigen::VectorXd& b, double eps) {
   return AssertMatrixNear<double,Eigen::Dynamic,1>(a_expr, b_expr, eps_expr, a, b, eps);
 }
 #define EXPECT_VECTORXD_EQ(a, b) EXPECT_PRED_FORMAT2(       AssertVectorXdEqual, a, b);
 #define EXPECT_VECTORXD_NEAR(a, b, eps) EXPECT_PRED_FORMAT3(AssertVectorXdNear, a, b, eps);
+
+// VectorXcd
+::testing::AssertionResult AssertVectorXcdEqual(const char *a_expr, const char *b_expr,						
+						const Eigen::VectorXcd& a, const Eigen::VectorXcd& b) {
+  return AssertMatrixEqual<std::complex<double>,Eigen::Dynamic,1>(a_expr, b_expr, a, b);
+}
+::testing::AssertionResult AssertVectorXcdNear(const char *a_expr, const char *b_expr, const char *eps_expr,
+					       const Eigen::VectorXcd& a, const Eigen::VectorXcd& b, double eps) {
+  return AssertMatrixNear<std::complex<double>,Eigen::Dynamic,1>(a_expr, b_expr, eps_expr, a, b, eps);
+}
+#define EXPECT_VECTORXCD_EQ(a, b) EXPECT_PRED_FORMAT2(       AssertVectorXcdEqual, a, b);
+#define EXPECT_VECTORXCD_NEAR(a, b, eps) EXPECT_PRED_FORMAT3(AssertVectorXcdNear, a, b, eps);
+
 
 #endif
