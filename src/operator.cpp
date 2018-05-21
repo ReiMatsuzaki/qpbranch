@@ -1,11 +1,25 @@
 #include <qpbranch/operator.hpp>
 
+using namespace std;
+
 namespace qpbranch {
-  OperatorRn::OperatorRn(int n) : n_(n) {}
-  OperatorPn::OperatorPn(int n) : n_(n) {}
-  OperatorDa::OperatorDa(int id) : id_(id) {}
-  OperatorGausspot::OperatorGausspot(complex<double> v0, complex<double> b, complex<double> q0):
-    v0_(v0), b_(b), q0_(q0) {}
+  string OperatorDa::str() const {
+    string buf = "Da[";
+    buf += "id = " + to_string(id_) + "]";
+    return buf;
+  }
+  void OperatorGausspot::At(const VectorXd& xs, VectorXcd *res) {
+    assert(xs.size()==res->size());
+    *res = v0_ * (-b_*xs.array().pow(2)).exp();
+  }
+  string OperatorGausspot::str() const {
+    //string buf = "Gausspot[" + to_string(v0_.real()) + "]";
+    string buf = "Gausspot[";
+    buf += "v0 = (" + to_string(v0_.real()) + ", " +  to_string(v0_.imag()) + "), ";
+    buf += "b  = (" + to_string(b_.real()) + ", " +  to_string(b_.imag()) + "), ";
+    buf += "q0 = (" + to_string(q0_.real()) + ", " +  to_string(q0_.imag()) + ") ] ";
+    return buf;
+  }
 }
 
 

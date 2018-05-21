@@ -19,9 +19,8 @@ namespace qpbranch {
   // forward declaration
   class OpBuf;
 
+  // Plane Wave Gauss Type Orbital basis set. Each basis share the same gauss parameters
   class Pwgto1c : public BasisSet {
-    /*typedef tuple<type_info, type_info, type_info> TTI;
-      map<TTI, void (func*)(OpBuf*,OpBuf*,Pwgto1c*,MatrixXcd*)> matrix_map_;*/
   public:
     // data size
     int num_, nop_;
@@ -39,12 +38,13 @@ namespace qpbranch {
     // Main
     Pwgto1c(const VectorXi& ns, double R0, double P0, complex<double> g0, const vector<Operator*>& ops);
     ~Pwgto1c();
-    void setup();
+    double& ref_R0() { return R0_; }
+    double& ref_P0() { return P0_; }
+    void SetUp();
     int size() const { return num_; }
-    void matrix(Operator *opbra, Operator *opket, MatrixXcd *res);
-    void at(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
-  };
-  
-} /* end namespace qpbranch */
+    void Matrix(Operator *opbra, Operator *opket, MatrixXcd *res);
+    void At(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
+  };  
+} 
 
 #endif

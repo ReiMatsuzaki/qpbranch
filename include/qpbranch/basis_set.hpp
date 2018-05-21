@@ -15,10 +15,10 @@ namespace qpbranch {
   class BasisSet {
   public:
     virtual ~BasisSet() {}
-    virtual void setup() = 0;    
+    virtual void SetUp() = 0;    
     virtual int size() const = 0;
-    virtual void matrix(Operator *ibra, Operator *iket, MatrixXcd *res) = 0;
-    virtual void at(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) = 0;    
+    virtual void Matrix(Operator *ibra, Operator *iket, MatrixXcd *res) = 0;
+    virtual void At(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) = 0;
   };
   
 }

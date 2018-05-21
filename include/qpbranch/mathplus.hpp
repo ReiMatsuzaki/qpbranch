@@ -4,13 +4,24 @@
 #include <Eigen/Core>
 
 namespace qpbranch {
-  using Eigen::VectorXcd;
+  using Eigen::VectorXd;
+  using Eigen::VectorXcd;  
   using std::complex;
-  void gtoint2n(int maxn, complex<double> z, VectorXcd *res);
-  void gammaint_nhalf(int maxn, VectorXcd *res);
-  void gtointn_shift(int maxn, complex<double> a, complex<double> b, complex<double> q0, VectorXcd *res);
-  void dwn_gaussint_shift(int maxN, complex<double> b, complex<double> gAB, complex<double> wAB,
-			  VectorXcd *ptr_res);
+
+  // Give an array of integration
+  //       { Int_{-oo}^{+oo} x^n Exp[-zx^2] dx   |   n = 0,...,maxn }.
+  void IntGto2N(int maxN, complex<double> z, VectorXcd *res);
+  // Give an array of gamma function with half integer
+  //       { Gamma(n+1/2)  |  n = 0,...,maxn}
+  void GammaNhalf(int maxN, VectorXd *res);
+  // Give an array of integration
+  //       { Int_{-oo}^{+oo} (q-q0)^n Exp[-z(q-w)^2 - b q^2] dq  |  n = 0,...,nmax }
+  void IntGtoShift(int maxN, complex<double> a, complex<double> b, complex<double> w,
+		   VectorXcd *res);
+  // Give an array of derivative of gauss function integration
+  //       { (d/dw)^N Int_{-oo}^{+oo} Exp[-a(q-w)^2 - b q^2]  | N = 0,...,maxN }
+  void DwIntGauss(int maxN, complex<double> a, complex<double> b, complex<double> w,
+		  VectorXcd *ptr_res);
 }
 
 #endif

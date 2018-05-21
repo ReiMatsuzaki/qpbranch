@@ -1,13 +1,11 @@
 #include <sys/stat.h>
 #include <iostream>
-#include <fstream>
+
 #include <boost/format.hpp>
 #include <qpbranch/con.hpp>
-#include <json11.hpp>
 
 namespace mangan4 {
   using namespace std;
-  using namespace json11;
   using namespace Eigen;
 
   template<class Scalar>
@@ -88,7 +86,7 @@ namespace mangan4 {
     return ifs.is_open();
   }
 
-  void Con::write(string key, int num, bool val) {
+  void Con::write_l(string key, int num, bool val) {
     this->open(key, num, 'w');
     if(val){
       file_ << "true" << endl;
@@ -97,27 +95,32 @@ namespace mangan4 {
     }
     this->close();
   }
-  void Con::write(string key, int num, double val) {
+  void Con::write_i(string key, int num, int val) {
     this->open(key, num, 'w');
     file_ << val << endl;
     this->close();
   }
-  void Con::write(string key, int num, const VectorXi& val) {
+  void Con::write_f(string key, int num, double val) {
+    this->open(key, num, 'w');
+    file_ << val << endl;
+    this->close();
+  }  
+  void Con::write_i1(string key, int num, const VectorXi& val) {
     this->open(key, num, 'w');
     write_vector<int>(file_, val);
     this->close();
   }
-  void Con::write(string key, int num, const MatrixXi& val) {
+  void Con::write_i2(string key, int num, const MatrixXi& val) {
     this->open(key, num, 'w');
     write_matrix<int>(file_, val);
     this->close();
   }
-  void Con::write(string key, int num, const VectorXd& val) {
+  void Con::write_f1(string key, int num, const VectorXd& val) {
     this->open(key, num, 'w');
     write_vector<double>(file_, val);
     this->close();
   }
-  void Con::write(string key, int num, const MatrixXd& val) {
+  void Con::write_f2(string key, int num, const MatrixXd& val) {
     this->open(key, num, 'w');
     write_matrix<double>(file_, val);
     this->close();

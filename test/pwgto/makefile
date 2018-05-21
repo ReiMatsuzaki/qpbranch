@@ -5,17 +5,12 @@ include ${QPBRANCH_ROOT}/conf.mk
 
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
-main.o: main.cpp
-
 main.x: LIBS+=${GTEST_LIBS}
-main.x: ${LIB}/libqpbranch.a ${LIB}/libgtest_main.a main.o
-	${CXX} main.o -o $@ -L${LIB} -lqpbranch -lgtest_main ${LIBS} ${LDFLAGS}
+main.x: main.o ${libqpbranch} ${libgtest_main}
 
-.PHONY: all
-
+.PHONY: all clean
 all: main.x
-	./$<
-
+	./main.x
 clean:
 	${RM} *.x *.o *.d
 

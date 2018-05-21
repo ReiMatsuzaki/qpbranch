@@ -21,45 +21,67 @@ namespace qpbranch {
     // options
     string type_gauss_, type_eomslow_;
     // intermediate
+    bool is_setup_;
     Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
     vector<Operator*> ops_opt_;
-    PlaneWaveGto *basis_;
+    VectorXd w_;    
+    MatrixXcd U_;
+    VectorXcd Clam_;
+    Pwgto *basis_;
+    VectorXd xs_; // grid for dumping wave functions.
     // Main
-    DySetPoly(Operator *pot, const VectorXi ns, string type_gauss);
-    void setup();
-    void update(double dt);
+    DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss);
+    void SetUp();
+    void Update(double dt);
+    // Accessor
+    void set_xs(int nx, double x0, double x1) { xs_=VectorXd::LinSpaced(nx,x0,x1); }
     // Calc
-    void calc_dotx_qhamilton(VectorXd *res);
-    void calc_dotx_quantum(bool is_tdvp, VectorXd *res);
-    void calc_H(Operator *op_bra, MatrixXcd *res);
-    void calc_eff_H(const VectorXd& dotx, MatrixXcd *res);
-    void update_basis();
+    // calculate time derivative of non linear real parameters with Hamilton equation for
+    // quantum Hamiltonian. The results are the same when single gaussian is applied.        
+    void DotxQhamilton(VectorXd *res);
+    void DotxQuantum(bool is_tdvp, VectorXd *res);
+    void Hamiltonian(Operator *op_bra, MatrixXcd *res);
+    void EffHamiltonian(const VectorXd& dotx, MatrixXcd *res);
+    double Norm2() const;
+    void UpdateBasis();
+    void DumpCon(int it, string prefix);
   };
 
+
   /*
-  class DyBranch {
-  public:
-    // size
-    int maxpath_;
-    // - variable -
-    AadfBasis *basis_;
-    VectorXd q0_, p0_, gr0_, gi0_;
-    VectorXcd c_tot_;
-    MatrixXcd c_;
-    // - const -
-    int nt_, n1t_;
-    double m_, pot_v0_, pot_b_, dt_, dal_;
-    // - options -
-    string type_gauss_, type_hamiltonian_, type_eomslow_;
-    int verbose_;
-    // - intermediate -
-    int nppath_;
-    double dydt_;
-    DyBranch(AadfBasis *basis, string type_gauss_, int maxpath);
-    ~DyBranch();
-    void setup();
-    void update();
+  // Dynamics mode for each path
+  enum DyMode { kNone, kSet, kPsa };
+
+  // Path Space Averaging data
+  class PsaData {
+    DyMode mode_;
+    VectorXd qlam_, plam_;
+    VectorXcd clam_;
+    PsaData(int n) : mode_(kNone), qlam_(n), plam_(n), clam_(n) {}
   };
+  
+  // Support branching dynamics
+  class DyPsa {
+  public:
+    // data
+    int max_path_;
+    VectorXi ns_;
+    string type_gauss_, type_eomslow_;
+    double m_;
+    Operator *pot_;
+    // intermediate 
+    vector<DySetPoly*> dys_;
+    map<DySetPoly*, PsaData*> psa_datas_;
+    VectorXd xs_; // grid for dumping wave functions.
+    
+    DyPsa(int max_path, Operator *pot, const VectorXi& ns, string type_gauss);
+    void SetUp();
+    void Update();
+    void DumpCon();
+    void AddPath(i, double q0, double p0, complex<double> g0);
+    void Branch(DySetPoly* path);
+    void set_xs(int nx, double x0, double x1);
+  }
   */
 }
 

@@ -6,15 +6,12 @@ include ${QPBRANCH_ROOT}/conf.mk
 main.o: CPPFLAGS+=${GTEST_CPPFLAGS}
 main.o: INCLUDE+=${GTEST_INCLUDE}
 main.x: LIBS+=${GTEST_LIBS}
-main.x: main.o ${libqpbranch} ${libgtest_main}
+main.x: main.o ${libqpbranch} ${libgtest_main} 
 
 .PHONY: all clean
 all: main.x
-	${RM} -r _con
-	./main.x
-	cat _con/z/0001.json
-
+	./$<
 clean:
 	${RM} *.x *.o *.d
-	${RM} -r _con
+
 
