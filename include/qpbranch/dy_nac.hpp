@@ -9,7 +9,7 @@
 namespace qpbranch {
 
   using std::string;
-  typedef boost::multi_array<OperatorPot*, 2> OpMat;
+  typedef boost::multi_array<Operator*, 2> OpMat;
 
   // Nuclear electron wave function propagation.
   // Wave function is assumed to
@@ -34,10 +34,11 @@ namespace qpbranch {
     // intermediate
     bool is_setup_;
     OpMat opHeIJ_;
-    OpMat opXkIJ_;    
+    OpMat opXkIJP_;    
   public:
     // Main
-    DyNac(const OpMat& HeIJ, const OpMat& XkIJ, const VectorXi& ns, string type_gauss);
+    DyNac(const OpMat& HeIJ, const OpMat& XkIJP, const VectorXi& ns,
+	  string type_gauss, int norder, double dx);	  
     void SetUp();
     void Update(double dt);
     void UpdateBasis();
@@ -46,7 +47,7 @@ namespace qpbranch {
     // calculate electron-nuclear Hamiltonian
     //     H_{AI,BJ} := (2m)^{-1}(GA,P2.GB) d_{IJ} - i.m^{-1}(GA,XIJ.P.GB) + (GA,HIJ.GB)
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
-    void DotxQhamilton(string vp_name, VectorXd *res);
+    void DotxQhamilton(VectorXd *res);
     // private
     int idx(int A, int I) const { return A+numA_*I; }
   };

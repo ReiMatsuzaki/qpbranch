@@ -26,12 +26,12 @@ protected:
     auto v = new OperatorGausspot(v0, b, q0);
     double m = 2000.0;
     OpMat opHeIJ(boost::extents[numI][numI]);
-    OpMat opXkIJ(boost::extents[numI][numI]);
+    OpMat opXkIJP(boost::extents[numI][numI]);
     opHeIJ[0][0] = v;
-    opXkIJ[0][0] = nullptr;
+    opXkIJP[0][0] = nullptr;
     
     // dynamics for Non Adiabatic Coupled 
-    dy_nac = new DyNac(opHeIJ, opXkIJ, ns, "thawed");
+    dy_nac = new DyNac(opHeIJ, opXkIJP, ns, "frozen", 2, 0.01);
     dy_nac->gamma0_ = complex<double>(1.0, 0.0);
     dy_nac->q0_ = -10.0;
     dy_nac->p0_ = 21.2312; // = sqrt(real(v0) *2.0*m)
@@ -40,7 +40,7 @@ protected:
     dy_nac->UpdateBasis();
     
     // Old
-    dy_old = new DySetPoly(v, ns, "thawed");
+    dy_old = new DySetPoly(v, ns, "frozen");
     dy_old->m_   = dy_nac->m_;
     dy_old->gr0_ = dy_nac->gamma0_.real();
     dy_old->gi0_ = dy_nac->gamma0_.imag();
@@ -72,11 +72,19 @@ TEST_F(TestMonoState, Hamiltonian) {
   dy_nac->Hamiltonian(dy_nac->id_, &H1);
   dy_old->Hamiltonian(dy_old->id_, &H2);
   EXPECT_MATRIXXCD_EQ(H1, H2);
+
+  dy_nac->Hamiltonian(dy_nac->DR_, &H1);
+  dy_old->Hamiltonian(dy_old->DR_, &H2);
+  EXPECT_MATRIXXCD_EQ(H1, H2);
+
+  dy_nac->Hamiltonian(dy_nac->DP_, &H1);
+  dy_old->Hamiltonian(dy_old->DP_, &H2);
+  EXPECT_MATRIXXCD_EQ(H1, H2);
   
 }
 TEST_F(TestMonoState, Dotx) {
   VectorXd dotx1(4), dotx2(4);
-  dy_nac->DotxQhamilton("tdvp", &dotx1);
+  dy_nac->DotxQhamilton(&dotx1);
   dy_old->DotxQhamilton(&dotx2);
   EXPECT_VECTORXD_NEAR(dotx1, dotx2, pow(10.0,-10));
 }

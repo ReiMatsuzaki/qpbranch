@@ -4,16 +4,17 @@
 namespace qpbranch{
   using mangan4::Con;
 
-  DyNac::DyNac(const OpMat& opHeIJ, const OpMat& opXkIJ, const VectorXi& ns, string type_gauss) :
+  DyNac::DyNac(const OpMat& opHeIJ, const OpMat& opXkIJP, const VectorXi& ns,
+	       string type_gauss, int norder, double dx) :
     numA_(ns.size()), numI_(opHeIJ.shape()[0]),
     q0_(0), p0_(0), gamma0_(1.0,0.0), 
     ns_(ns), m_(1.0),
-    type_gauss_(type_gauss), is_setup_(false), opHeIJ_(opHeIJ), opXkIJ_(opXkIJ) {
+    type_gauss_(type_gauss), is_setup_(false), opHeIJ_(opHeIJ), opXkIJP_(opXkIJP) {
 
     assert(type_gauss=="frozen"||type_gauss=="thawed");
     assert(numI_ == (int)opHeIJ.shape()[1]);
-    assert(numI_ == (int)opXkIJ.shape()[0]);
-    assert(numI_ == (int)opXkIJ.shape()[1]);
+    assert(numI_ == (int)opXkIJP.shape()[0]);
+    assert(numI_ == (int)opXkIJP.shape()[1]);
 
     id_ = new OperatorId();
     r1_ = new OperatorRn(1);
@@ -30,8 +31,8 @@ namespace qpbranch{
 	  if(opHeIJ_[I][J] != nullptr)
 	    ops.push_back(opHeIJ_[I][J]);
 	if(I<J)
-	  if(opXkIJ_[I][J] != nullptr)
-	    ops.push_back(opXkIJ_[I][J]);
+	  if(opXkIJP_[I][J] != nullptr)
+	    ops.push_back(opXkIJP_[I][J]);
       }
 
     if(type_gauss == "frozen") {
@@ -42,7 +43,7 @@ namespace qpbranch{
       Dgi_ = new OperatorDa(kIdDgi); ops.push_back(Dgi_);
     }
 
-    basis_ = new Pwgto(ns, ops);
+    basis_ = new Pwgto(ns, ops, norder, dx);
   
   }
   void DyNac::SetUp() {
@@ -99,10 +100,9 @@ namespace qpbranch{
     assert(res->rows()==numA_*numI_);
     assert(res->cols()==numA_*numI_);
 
-    MatrixXcd S(numA_,numA_), P2(numA_,numA_), HeIJ(numA_,numA_), XkIJ(numA_,numA_);
+    MatrixXcd P2(numA_,numA_), HeIJ(numA_,numA_), XkIJP(numA_,numA_);
 
-    basis_->Matrix(id_,id_,&S);
-    basis_->Matrix(id_,p2_,&P2);
+    basis_->Matrix(op_bra,p2_,&P2);
 
     *res = MatrixXcd::Zero(numA_*numI_, numA_*numI_);
     for(int I = 0; I < numI_; I++) {
@@ -115,7 +115,7 @@ namespace qpbranch{
 
     for(int I = 0; I < numI_; I++) {
       for(int J = I; J < numI_; J++) {
-	basis_->Matrix(id_, opHeIJ_[I][J], &HeIJ);
+	basis_->Matrix(op_bra, opHeIJ_[I][J], &HeIJ);
 	for(int A = 0; A < numA_; A++) {
 	  for(int B = 0; B < numA_; B++) {
 	    (*res)(idx(A,I),idx(B,J)) += HeIJ(A,B);
@@ -129,17 +129,36 @@ namespace qpbranch{
     complex<double> i(0,1);
     for(int I = 0; I < numI_; I++) {
       for(int J = I+1; J < numI_; J++) {
-	basis_->Matrix(p1_, opXkIJ_[I][J], &XkIJ);
+	if(opXkIJP_[I][J]==nullptr)
+	  continue;
+	basis_->Matrix(op_bra, opXkIJP_[I][J], &XkIJP);
 	for(int A = 0; A < numA_; A++) {
 	  for(int B = 0; B < numA_; B++) {
-	    (*res)(idx(A,I),idx(B,J)) += -i/m_*XkIJ(A,B);
-	    (*res)(idx(A,J),idx(B,I)) += +i/m_*XkIJ(A,B);
+	    (*res)(idx(A,I),idx(B,J)) += -i/m_*XkIJP(A,B);
+	    (*res)(idx(A,J),idx(B,I)) += +i/m_*XkIJP(A,B);
 	  }
 	}
       }
     }
 
   }
-  void DyNac::DotxQhamilton(string vp_name, VectorXd *res) {
+  void DyNac::DotxQhamilton(VectorXd *res) {
+    assert(numA_==1);
+    assert(res->size()==4);
+
+    MatrixXcd H(numI_,numI_);
+
+    *res = VectorXd::Zero(4);
+
+    this->Hamiltonian(DR_, &H);
+    (*res)[1] = -2*real(cAI_.dot(H*cAI_));  // dot{P} = -dH/dR
+    this->Hamiltonian(DP_, &H);
+    (*res)[0] = 2*real(cAI_.dot(H*cAI_));  // dot{R} = dH/dP
+    
+    if(type_gauss_=="thawed") {
+      cerr << "not impled" << endl; abort();
+    } 
+    
+    
   }  
 }
