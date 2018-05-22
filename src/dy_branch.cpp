@@ -249,6 +249,9 @@ namespace qpbranch {
     }
     basis_->SetUp();
   }
+  void DySetPoly::At(const VectorXd& xs, VectorXcd *ys) const {
+    basis_->At(id_, c_, xs, ys);
+  }
   void DySetPoly::DumpCon(int it, string prefix) {
     Con& con = Con::getInstance();
     

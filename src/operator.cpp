@@ -39,8 +39,25 @@ namespace qpbranch {
       (*res)(i) = (*spline_)(xs[i]);
     }
   }
-  string OperatorSpline::str() const {
-    return "spline";
+  OperatorSplineP1::OperatorSplineP1(const VectorXd& xs, const VectorXd& ys) {
+    assert(xs.size()==ys.size());
+
+    // convert Eigen::VectorXcd to STL vector.
+    int n = ys.size();
+    std::vector<double> yys(n);
+    for(int i = 0; i < n; i++)
+      yys[i] = ys[i];
+    
+    // build spline object
+    spline_ = new boost::math::cubic_b_spline<double>
+      (yys.begin(), yys.end(), xs[0], xs[1]-xs[0]);
+
+  }
+  void OperatorSplineP1::At(const VectorXd& xs, VectorXcd *res) const {
+    assert(xs.size()==res->size());
+    for(int i = 0; i < xs.size(); i++) {
+      (*res)(i) = (*spline_)(xs[i]);
+    }
   }
 }
 

@@ -37,7 +37,8 @@ namespace qpbranch {
   // Matrix elements are evaluated with extended McMurcy-Davidson recursion formula.
   // See Tachikawa et al.
   class Pwgto : public BasisSet {
-  protected:
+    //  protected:
+  public:
     // data size
     int num_, nop_;
     // const
@@ -79,6 +80,7 @@ namespace qpbranch {
     void Matrix(Operator *ibra, Operator *iket, MatrixXcd *res);
     void At(Operator *iop, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);    
     void DumpCon(int it);
+    void DumpBuf() const;
     inline complex<double> get_d(int A, int B,int na,int nb,int Nk) {
       return (*(*d_)[A][B])[na][nb][Nk];
     }

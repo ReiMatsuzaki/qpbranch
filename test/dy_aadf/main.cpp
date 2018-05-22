@@ -59,6 +59,7 @@ TEST_F(TestMonoGauss, At) {
   VectorXcd y1s(nx), y2s(nx);
   dy_aadf->basis_->At(dy_aadf->id_, cs, xs, &y1s);
   dy_old->basis_->At( dy_aadf->id_, cs, xs, &y2s);
+  cerr << y1s << endl;
   EXPECT_VECTORXCD_EQ(y1s, y2s);
 }
 TEST_F(TestMonoGauss, Hamiltonian) {

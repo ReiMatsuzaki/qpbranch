@@ -37,13 +37,14 @@ namespace qpbranch {
     void set_xs(int nx, double x0, double x1) { xs_=VectorXd::LinSpaced(nx,x0,x1); }
     // Calc
     // calculate time derivative of non linear real parameters with Hamilton equation for
-    // quantum Hamiltonian. The results are the same when single gaussian is applied.        
+    // quantum Hamiltonian. The results are the same when single gaussian is applied.  
     void DotxQhamilton(VectorXd *res);
     void DotxQuantum(bool is_tdvp, VectorXd *res);
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
     void EffHamiltonian(const VectorXd& dotx, MatrixXcd *res);
     double Norm2() const;
     void UpdateBasis();
+    void At(const VectorXd& xs, VectorXcd *ys) const;
     void DumpCon(int it, string prefix);
   };
 

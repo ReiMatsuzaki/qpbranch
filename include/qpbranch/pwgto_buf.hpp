@@ -28,6 +28,7 @@ namespace qpbranch {
   public:
     virtual int Maxn(int A) = 0;
     virtual void SetUp(Pwgto *basis) = 0;
+    virtual void Dump() const = 0;
     virtual void Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) = 0;
     virtual void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res) = 0;
     virtual void Matrix(OpBufGausspot *opket, Pwgto *basis, MatrixXcd *res) = 0;
@@ -52,7 +53,8 @@ namespace qpbranch {
     const vector<VectorXi>& ns() const { return ns_; }
     const vector<VectorXcd>& cs() const { return cs_; }
     int Maxn(int A);
-    void InitZero(int A, int num);    
+    void InitZero(int A, int num);
+    void Dump() const;
     virtual void SetUp(Pwgto *basis) = 0;
     void Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res);
     void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
@@ -114,6 +116,7 @@ namespace qpbranch {
     const VectorXi& ns() const { return ns_; }
     OperatorGausspot *op() const { return op_; }
     int Maxn(int A);
+    void Dump() const;
     void SetUp(Pwgto *basis);
     void Matrix(OpBuf *opbrat, Pwgto *basis, MatrixXcd *res);
     void Matrix(OpBufBasic *opket, Pwgto *basis, MatrixXcd *res);
@@ -126,11 +129,18 @@ namespace qpbranch {
     void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res);
   };
   // Buffer for numerical potential
-  class OpBufSpline : public OpBufBasic {    
+  class OpBufSpline : public OpBufBasic {
     OperatorSpline *op_;
   public:
     OpBufSpline(const VectorXi& ns, int norder, OperatorSpline *op);
     OperatorSpline *op() const { return op_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
+  };
+  class OpBufSplineP1 : public OpBufBasic {
+    OperatorSplineP1 *op_;
+  public:
+    OpBufSplineP1(const VectorXi& ns, int norder, OperatorSplineP1 *op);
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
   };

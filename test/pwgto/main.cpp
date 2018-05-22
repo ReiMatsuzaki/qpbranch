@@ -7,6 +7,7 @@
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/pwgto.hpp>
 #include <qpbranch/pwgto1c.hpp>
+#include <qpbranch/pwgto_buf.hpp>
 #include <qpbranch/ppwgto.hpp>
 
 using namespace std;
@@ -489,4 +490,50 @@ TEST(utest_pwgto, test_spline) {
 
   EXPECT_MATRIXXCD_NEAR(M1, M2, pow(10.0, -10.0));
 }
+TEST(utest_pwgto, test_spline_dx) {
 
+  auto k = 1.0;
+  VectorXd xs = VectorXd::LinSpaced(100, -5.0, 5.0);
+  VectorXd ys = k/2*(xs.array()*xs.array());
+  auto op_v    = new OperatorSpline(xs, ys);
+  auto op_v_p1 = new OperatorSplineP1(xs, ys);
+
+  auto id = new OperatorId();
+  auto p1 = new OperatorPn(1);
+  vector<Operator*> ops = {id, p1, op_v, op_v_p1};
+
+  int num(2);
+  VectorXi ns(num); ns << 0,1;
+
+  int norder = 0;
+  auto *basis = new Pwgto(ns, ops, norder, 0.01);
+  basis->ref_gs() << 1.0, 1.2;
+  basis->ref_Rs() << 0.3, 0.0;
+  basis->ref_Ps() << 0.3, 0.0;
+  basis->SetUp();
+  
+  /*
+  cout << endl << endl;
+  cout << "id" << endl;
+  basis->buffer_map_[id]->Dump();
+  cout << endl << "op_v" << endl;
+  basis->buffer_map_[op_v]->Dump();
+  cout << endl << "op_p1" << endl;
+  basis->buffer_map_[p1]->Dump();
+  cout << endl << "op_v_p1" << endl;
+  basis->buffer_map_[op_v_p1]->Dump();
+  */
+  
+  MatrixXcd M1(num, num);
+  basis->Matrix(id, op_v_p1, &M1);
+  MatrixXcd M2(num, num);
+  basis->Matrix(p1, op_v, &M2);
+  EXPECT_MATRIXXCD_EQ(M1, M2);
+  
+  basis->Matrix(id, p1, &M1);
+  basis->Matrix(p1, id, &M2);
+  EXPECT_MATRIXXCD_EQ(M1, M2);
+  
+  delete basis;
+    
+}

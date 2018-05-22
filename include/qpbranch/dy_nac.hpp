@@ -1,36 +1,55 @@
 #ifndef DY_NAC_HPP_
 #define DY_NAC_HPP_
 
+#include <boost/multi_array.hpp>
+
 #include "operator.hpp"
 #include "pwgto.hpp"
 
 namespace qpbranch {
 
   using std::string;
+  typedef boost::multi_array<OperatorPot*, 2> OpMat;
 
   // Nuclear electron wave function propagation.
   // Wave function is assumed to
-  //     \Psi(r,Q,t) = \chi(Q,t)\Phi(r,t;Q)
-  //     \chi(Q,t)   = \sum_A D_A G_A(Q,t)
-  //     \Phi(r,t;Q) = \sum_I C_I \Phi_I(r;Q)
+  //     \Psi(r,Q,t) = sum_AI C_AI \chi_A(Q,t)\Phi_I(r,t;Q)
   class DyNac {
+  public:    
     // size
     int numA_, numI_;
     // variable
     double q0_, p0_;
     std::complex<double> gamma0_;
+    VectorXcd cAI_;
     // const
+    VectorXi ns_;
     double m_;
+    // basis functions
+    Operator *id_, *r1_, *r2_, *p1_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
+    Pwgto *basis_;
+  private:
     // options
     std::string type_gauss_;
     // intermediate
     bool is_setup_;
-    std::vector<std::vector<OperatorPot*> > potHIJ_;
-    std::vector<std::vector<OperatorPot*> > potXIJ_;
-    Operator *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_, *r1_, *r2_;
-    pwgto *basis_;
+    OpMat opHeIJ_;
+    OpMat opXkIJ_;    
+  public:
     // Main
-    DyNac(Operator)
+    DyNac(const OpMat& HeIJ, const OpMat& XkIJ, const VectorXi& ns, string type_gauss);
+    void SetUp();
+    void Update(double dt);
+    void UpdateBasis();
+    // Calc
+    void At(int I, const VectorXd& xs, VectorXcd *ys) const;
+    // calculate electron-nuclear Hamiltonian
+    //     H_{AI,BJ} := (2m)^{-1}(GA,P2.GB) d_{IJ} - i.m^{-1}(GA,XIJ.P.GB) + (GA,HIJ.GB)
+    void Hamiltonian(Operator *op_bra, MatrixXcd *res);
+    void DotxQhamilton(string vp_name, VectorXd *res);
+    // private
+    int idx(int A, int I) const { return A+numA_*I; }
   };
   
 }
+#endif

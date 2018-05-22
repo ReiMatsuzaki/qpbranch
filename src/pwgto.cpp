@@ -173,6 +173,10 @@ namespace qpbranch {
     con.write_f1("gi", it, gs_.imag());
 
   }
-
+  void Pwgto::DumpBuf() const {
+    for(auto it = buffer_map_.begin(); it!=buffer_map_.end(); ++it) {
+      it->second->Dump();
+    }
+  }
 }
 

@@ -9,6 +9,7 @@ using namespace std;
 namespace qpbranch {
 
   OpBuf* MakeOpBuf(Pwgto *basis, Operator *op) {
+    assert(op!=nullptr);
     const VectorXi& ns = basis->ns();
     const type_info& optype = typeid(*op);
     if(optype == typeid(OperatorId)) {
@@ -25,6 +26,9 @@ namespace qpbranch {
     } else if(optype == typeid(OperatorSpline)) {
       auto opop = static_cast<OperatorSpline*>(op);
       return new OpBufSpline(ns, basis->norder(), opop);
+    } else if(optype == typeid(OperatorSplineP1)) {
+      auto opop = static_cast<OperatorSplineP1*>(op);
+      return new OpBufSplineP1(ns, basis->norder(), opop);      
     } else if(optype == typeid(OperatorGausspot)) {
       auto opop = static_cast<OperatorGausspot*>(op);
       return new OpBufGausspot(ns, opop);
@@ -232,6 +236,18 @@ namespace qpbranch {
       }
       (*res)(ix) = cumsum;
     }    
+  }  
+  void OpBufBasic::Dump() const {
+    using std::cout;
+    using std::endl;
+    cout << "OpBufBasic" << endl;
+    cout << "num: " << num_ << endl;
+    for(int A = 0; A < num_; A++) {
+      cout << "A=" << A << endl;
+      for(int i = 0; i < nums_[A]; i++) {
+	cout << ns_[A][i] << " " << cs_[A][i] << endl;
+      }
+    }
   }
   
   OpBufId::OpBufId(const VectorXi& ns) : OpBufBasic(ns.size()) {
@@ -553,10 +569,92 @@ namespace qpbranch {
       cs_[A][2] = (ys(2)+ys(0)-2.0*ys(1))/(dx*dx);
     }
   }
-  
+  OpBufSplineP1::OpBufSplineP1(const VectorXi& ns, int norder, OperatorSplineP1 *op):
+    OpBufBasic(ns.size()), op_(op) {
+    assert(0<=norder && norder<=2);
+
+    for(int A = 0; A < ns.size(); A++) {
+      int nA = ns(A);
+      if(nA == 0) {
+	this->InitZero(A, 2*(norder+1));
+	for(int i = 0; i < norder+1; i++) {
+	  ns_[A][2*i]   = nA+i+1;
+	  ns_[A][2*i+1] = nA+i;
+	}
+      } else {
+	this->InitZero(A, 3*(norder+1));
+	for(int i = 0; i < norder+1; i++) {
+	  ns_[A][3*i]   = nA+i+1;
+	  ns_[A][3*i+1] = nA+i;
+	  ns_[A][3*i+2] = nA+i-1;
+	}
+      }
+    }
+  }
+  void OpBufSplineP1::SetUp(Pwgto *basis) {
+    int norder = basis->norder();
+    assert(0<=norder && norder<=2);
+    double dx = basis->dx();
+    complex<double> i(0, 1);
+    
+    for(int A = 0; A < basis->num(); A++) {
+
+      auto nA = basis->ns()[A];
+      auto NA = basis->Ns()[A];
+      auto pA = basis->Ps()[A];
+      auto gA = basis->gs()[A];
+
+      // numerical derivative
+      VectorXd xs(3);
+      VectorXcd ys(3);
+      VectorXcd ds(3);
+      xs(1) = basis->Rs()[A];
+      xs(0) = xs(1)-dx;
+      xs(2) = xs(1)+dx;
+      op_->At(xs, &ys);
+      ds(0) = ys(1);
+      ds(1) = (ys(2)-ys(0))/(2*dx);
+      ds(2) = 0.5 * (ys(2)+ys(0)-2.0*ys(1))/(dx*dx);
+
+      //
+      // f = (v0 + v1.x + v2.xx).(-2g.x^(nA+1) + i.pA.x^nA + nA.x^{nA-1})
+      if(nA==0) {
+	ns_[A][2*0+0]   = nA+1; cs_[A][2*0+0] = -i*NA*ds(0) * (-2.0*gA);
+	ns_[A][2*0+1]   = nA+0; cs_[A][2*0+1] = -i*NA*ds(0) * (i*pA);
+	if(norder>0) {
+	  ns_[A][2*1+0] = nA+2; cs_[A][2*1+0] = -i*NA*ds(1) * (-2.0*gA);
+	  ns_[A][2*1+1] = nA+1; cs_[A][2*1+1] = -i*NA*ds(1) * (i*pA);
+	}
+	if(norder>1) {
+	  ns_[A][2*2+0] = nA+3; cs_[A][2*2+0] = -i*NA*ds(2) * (-2.0*gA);
+	  ns_[A][2*2+1] = nA+2; cs_[A][2*2+1] = -i*NA*ds(2) * (i*pA);
+	}
+      } else {
+	ns_[A][3*0+0] = nA+1; cs_[A][3*0+0]   = -i*NA*ds(0) * (-2.0*gA);
+	ns_[A][3*0+1] = nA+0; cs_[A][3*0+1]   = -i*NA*ds(0) * i*pA;
+	ns_[A][3*0+2] = nA-1; cs_[A][3*0+2]   = -i*NA*ds(0) * (1.0*nA);
+	if(norder>0) {
+	  ns_[A][3*1+0] = nA+2; cs_[A][3*1+0] = -i*NA*ds(1) * (-2.0*gA);
+	  ns_[A][3*1+1] = nA+1; cs_[A][3*1+1] = -i*NA*ds(1) * i*pA;
+	  ns_[A][3*1+2] = nA+0; cs_[A][3*1+2] = -i*NA*ds(1) * (1.0*nA);
+	}
+	if(norder>1) {
+	  ns_[A][3*2+0] = nA+3; cs_[A][3*2+0] = -i*NA*ds(2) * (-2.0*gA);
+	  ns_[A][3*2+1] = nA+2; cs_[A][3*2+1] = -i*NA*ds(2) * (i*pA);
+	  ns_[A][3*2+2] = nA+1; cs_[A][3*2+2] = -i*NA*ds(2) * (1.0*nA);
+	}
+      }
+
+      
+    }
+  }
+  void OpBufSplineP1::SetUp(Pwgto1c *) {
+    throw runtime_error("not impl");
+  }
   OpBufGausspot::OpBufGausspot(const VectorXi& ns, OperatorGausspot *op) : num_(ns_.size()),
 									   ns_(ns), op_(op) {}  
   int OpBufGausspot::Maxn(int A) { return ns_(A); }
+  void OpBufGausspot::Dump() const { cout << "gauss" << endl; }
   void OpBufGausspot::SetUp(Pwgto*) {}
   void OpBufGausspot::Matrix(OpBuf *opbra, Pwgto *basis, MatrixXcd *res) {
     opbra->Matrix(this, basis, res);
@@ -578,6 +676,5 @@ namespace qpbranch {
   void OpBufGausspot::Matrix(OpBufGausspot *, Pwgto1c *, MatrixXcd *) {}
   void OpBufGausspot::At(Pwgto1c*, const VectorXcd&, const VectorXd&, VectorXcd *) {
     throw runtime_error("not impl");
-  }
-  
+  }  
 }

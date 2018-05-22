@@ -76,6 +76,9 @@ namespace qpbranch {
     }
     
   }
+  void DyAadf::At(const VectorXd& xs, VectorXcd *ys) const {
+    basis_->At(id_, c_, xs, ys);
+  }
   void DyAadf::DotxQhamilton(VectorXd *res) {
     assert(is_setup_);
     assert(res->size()==4);

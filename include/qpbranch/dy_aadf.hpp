@@ -40,6 +40,7 @@ namespace qpbranch {
     void SetUp();
     void Update(double dt);
     // calc
+    void At(const VectorXd& xs, VectorXcd *ys) const;
     void DotxQhamilton(VectorXd *res);
     void DotxQuantum(bool is_tdvp, VectorXd *res);
     // calculate AADF hamiltonian for fast motion F.

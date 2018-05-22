@@ -39,6 +39,7 @@ AssertMatrixNear(const char *a_expr,
   for(int i = 0; i < a.rows(); i++) {
     for(int j = 0; j < a.cols(); j++) {
       double diff = std::abs(a(i,j)-b(i,j));
+      
       if(diff > eps) {
 	string str_a(a_expr);
 	string str_b(b_expr);
@@ -78,7 +79,7 @@ AssertMatrixEqual(const char *a_expr,
 
 
 // MatrixXcd
-::testing::AssertionResult AssertMatrixXcdEqual(const char *a_expr, const char *b_expr,						
+::testing::AssertionResult AssertMatrixXcdEqual(const char *a_expr, const char *b_expr,
 						const Eigen::MatrixXcd& a, const Eigen::MatrixXcd& b) {
   return AssertMatrixEqual<std::complex<double>,Eigen::Dynamic,Eigen::Dynamic>(a_expr, b_expr, a, b);
 }

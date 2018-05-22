@@ -62,7 +62,14 @@ namespace qpbranch {
   public:
     OperatorSpline(const VectorXd& xs, const VectorXd& ys);
     void At(const VectorXd& xs, VectorXcd *res) const;
-    string str() const;
+    string str() const { return "spline"; }
+  };
+  class OperatorSplineP1 : public Operator {
+    boost::math::cubic_b_spline<double> *spline_;
+  public:
+    OperatorSplineP1(const VectorXd& xs, const VectorXd& ys);
+    void At(const VectorXd& xs, VectorXcd *res) const;
+    string str() const { return "spline_p1"; }
   };
 }
 #endif
