@@ -1,5 +1,6 @@
 #include <qpbranch/dy_nac.hpp>
 #include <qpbranch/con.hpp>
+#include <qpbranch/eigenplus.hpp>
 
 namespace qpbranch{
   using mangan4::Con;
@@ -75,8 +76,29 @@ namespace qpbranch{
   }
   void DyNac::Update(double dt) {
     assert(is_setup_);
-    MatrixXcd H(numA_*numI_,numA_*numI_);
+
+    this->UpdateBasis();
+
+    // non linear parameter
+    VectorXd dotx(4);
+    this->DotxQhamilton(&dotx);
+
+    // coefficient
+    MatrixXcd H(numA_*numI_,numA_*numI_), S(numA_*numI_,numA_*numI_);    
+    //    this->EffHamiltonian(dotx, &H);
     this->Hamiltonian(id_, &H);
+    this->Overlap(&S);
+
+    // propagate nonlinear
+    q0_ += dotx(0) *dt;
+    p0_ += dotx(1) *dt;
+    if(type_gauss_=="thawed") {
+      gamma0_ += complex<double>(dotx(2), dotx(3))*dt;
+    }
+
+    // propagate coefficient
+    IntetGdiag(H, S, dt, &cAI_);
+    
   }
   void DyNac::UpdateBasis() {
 
@@ -102,9 +124,9 @@ namespace qpbranch{
 
     MatrixXcd P2(numA_,numA_), HeIJ(numA_,numA_), XkIJP(numA_,numA_);
 
-    basis_->Matrix(op_bra,p2_,&P2);
-
     *res = MatrixXcd::Zero(numA_*numI_, numA_*numI_);
+    
+    basis_->Matrix(op_bra,p2_,&P2);    
     for(int I = 0; I < numI_; I++) {
       for(int A = 0; A < numA_; A++) {
 	for(int B = 0; B < numA_; B++) {
@@ -115,6 +137,8 @@ namespace qpbranch{
 
     for(int I = 0; I < numI_; I++) {
       for(int J = I; J < numI_; J++) {
+	if(opHeIJ_[I][J]==nullptr)
+	  continue;
 	basis_->Matrix(op_bra, opHeIJ_[I][J], &HeIJ);
 	for(int A = 0; A < numA_; A++) {
 	  for(int B = 0; B < numA_; B++) {
@@ -142,6 +166,52 @@ namespace qpbranch{
     }
 
   }
+  void DyNac::EffHamiltonian(const VectorXd& dotx, MatrixXcd *ptr_res) {
+    assert(is_setup_);
+
+    complex<double> i(0,1);
+    MatrixXcd M(numA_*numI_,numA_*numI_);
+    MatrixXcd& res(*ptr_res);
+
+    this->Hamiltonian(id_, &res);
+
+    basis_->Matrix(id_, DR_, &M);
+    res += -i*M*dotx(0);
+
+    basis_->Matrix(id_, DP_, &M);
+    res += -i*M*dotx(1);
+
+    if(type_gauss_=="thawed") {
+      basis_->Matrix(id_, Dgr_, &M);
+      res += -i*M*dotx(2);
+      basis_->Matrix(id_, Dgi_, &M);
+      res += -i*M*dotx(3);
+    } else if(type_gauss_=="frozen") {
+    } else {
+      cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type_gauss" << endl; abort();
+    }
+    
+  }
+  void DyNac::Overlap(MatrixXcd *ptr_res) {
+    assert(ptr_res->rows()==numI_*numA_);
+    assert(ptr_res->rows()==ptr_res->cols());
+
+    MatrixXcd& res(*ptr_res);
+    res.array() = 0.0;
+
+    MatrixXcd S = MatrixXcd::Zero(numA_,numA_);
+    basis_->Matrix(id_, id_, &S);
+    
+    for(int I = 0; I < numI_; I++) {
+      for(int A = 0; A < numA_; A++) {
+	for(int B = 0; B < numA_; B++) {
+	  res(idx(A,I),idx(A,I)) = S(A,B);
+	}
+      }      
+    }
+
+    
+  }
   void DyNac::DotxQhamilton(VectorXd *res) {
     assert(numA_==1);
     assert(res->size()==4);
@@ -150,15 +220,50 @@ namespace qpbranch{
 
     *res = VectorXd::Zero(4);
 
-    this->Hamiltonian(DR_, &H);
-    (*res)[1] = -2*real(cAI_.dot(H*cAI_));  // dot{P} = -dH/dR
-    this->Hamiltonian(DP_, &H);
-    (*res)[0] = 2*real(cAI_.dot(H*cAI_));  // dot{R} = dH/dP
+    this->Hamiltonian(DP_, &H);  // dot{R} = dH/dP
+    (*res)[0] = 2*real(cAI_.dot(H*cAI_));  
+    this->Hamiltonian(DR_, &H);  // dot{P} = -dH/dR
+    (*res)[1] = -2*real(cAI_.dot(H*cAI_));  
     
     if(type_gauss_=="thawed") {
-      cerr << "not impled" << endl; abort();
-    } 
+      auto gr2 = pow(real(gamma0_), 2);
+      this->Hamiltonian(Dgi_, &H); // dot{gi} = (4gr^2)  dH/dgi
+      (*res)[2] = (+4.0*gr2) * 2.0*real(cAI_.dot(H*cAI_));
+      this->Hamiltonian(Dgr_, &H); // dot{gr} = (-4gr^2) dH/dgr
+      (*res)[3] = (-4.0*gr2) * 2.0*real(cAI_.dot(H*cAI_));
+    }
+  }
+  void DyNac::CalcProb(VectorXd *res) {
+    assert(res->size()==numI_);
+
+    for(int I = 0; I < numI_; I++) {
+      double cumsum(0);
+      for(int A = 0; A < numA_; A++) {
+	cumsum += pow(abs(cAI_(idx(A,I))), 2);
+      }
+      (*res)(I) = cumsum;
+    }
     
+  }
+  void DyNac::DumpCon(int it, string prefix) {
+
+    Con& con = Con::getInstance();
+
+    con.write_f(prefix+"q0", it, q0_);
+    con.write_f(prefix+"p0", it, p0_);
+    con.write_f(prefix+"gr0", it, gamma0_.real());
+    con.write_f(prefix+"gi0", it, gamma0_.imag());
+    con.write_f1(prefix+"c_re", it, cAI_.real());
+    con.write_f1(prefix+"c_im", it, cAI_.imag());
+
+    VectorXd prob(numI_);
+    this->CalcProb(&prob);
+    con.write_f1(prefix+"prob", it, prob);
+
+    if(it==0) {
+      con.write_i(prefix+"_numA", 0, numA_);
+      con.write_i(prefix+"_numI", 0, numI_);
+    }
     
-  }  
+  }
 }

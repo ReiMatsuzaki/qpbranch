@@ -47,7 +47,12 @@ namespace qpbranch {
     // calculate electron-nuclear Hamiltonian
     //     H_{AI,BJ} := (2m)^{-1}(GA,P2.GB) d_{IJ} - i.m^{-1}(GA,XIJ.P.GB) + (GA,HIJ.GB)
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
+    void EffHamiltonian(const VectorXd& dotx, MatrixXcd *res);
+    void Overlap(MatrixXcd *res);
     void DotxQhamilton(VectorXd *res);
+    void CalcProb(VectorXd *res);
+    // IO
+    void DumpCon(int it, string prefix="");
     // private
     int idx(int A, int I) const { return A+numA_*I; }
   };
