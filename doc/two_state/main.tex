@@ -32,7 +32,7 @@ I used atomic unit in the formulation.
 
 \section{Two level model}
 Consider a system with Hamiltonian $H_0$ having only two eigenstates, $\psi_a$ and $\psi_b$,
-with eigen energies $E_a$ and $E_b$. The most general wave function for this system may be
+with eigen energies $E_a$ and $E_b$. Define $\omega_0=E_b-E_a$. The most general wave function for this system may be
 written as
 \begin{eqnarray}
   \Psi(t) = a(t)e^{-iE_at}\psi_a + b(t)e^{-iE_bt}\psi_b.
@@ -42,8 +42,8 @@ obey the coupled equation
 \begin{eqnarray}
   i \frac{d}{dt}
   \begin{pmatrix}
-    a e^{-iE_at} \\
-    b e^{-iE_bt}
+    a(t) e^{-iE_at} \\
+    b(t) e^{-iE_bt}
   \end{pmatrix}
   =  
   \begin{pmatrix}
@@ -57,19 +57,34 @@ obey the coupled equation
 \end{eqnarray}
 This leads to a system of differential equation for the expansion coefficient
 \begin{eqnarray}
-  i\dot{a}(t) &=& \frac{ix}{2}b(t)e^{-i\omega_0t}  \label{eq:dota} \\
-  i\dot{b}(t) &=& \frac{ix}{2}a(t)e^{+i\omega_0t}. \label{eq:dotb}
+  \dot{a}(t) &=& \frac{ix}{2}b(t)e^{-i\omega_0t}  \label{eq:dota} \\
+  \dot{b}(t) &=& \frac{ix}{2}a(t)e^{+i\omega_0t}. \label{eq:dotb}
 \end{eqnarray}
-By taking another time derivative of Eq. (\ref{eq:dota}) and substituting for $\dot{b}$
+By taking another time derivative of Eq. (\ref{eq:dota}) and substituting for $b$ and $\dot{b}$
 we obtain the second order differential equation
 \begin{eqnarray}
-  i\ddot{a}(t)
-  &=& \frac{\omega_0}{2}b(t)e^{-i\omega_0t} + \frac{ix}{2}\dot{b}(t)e^{-i\omega_0t} \\
-  &=& \omega_0\dot{a}(t) - i \frac{|x|^2}{4}a(t).
+  \ddot{a}(t)
+  &=& \frac{\omega_0x}{2}b(t)e^{-i\omega_0t} + \frac{ix}{2}\dot{b}(t)e^{-i\omega_0t} \\
+  &=& -i\omega_0\dot{a}(t) - \frac{|x|^2}{4}a(t).
 \end{eqnarray}
-To solve this equation, we substitute a trial function $a(t)=\exp(\lambda t)$ and obtain
+To solve this equation, we substitute a trial function $a(t)=\exp(i\lambda t)$ and obtain
 \begin{eqnarray}
-  \lambda^2 + i \omega_0\lambda + \frac{x^2}{4} = 0
+  \lambda^2 + \omega_0\lambda - \frac{x^2}{4} = 0.
+\end{eqnarray}
+The solution is
+\begin{eqnarray}
+  \lambda &=& \frac{\omega_0 \pm \Omega }{2}, \\
+  \Omega  &=& \sqrt{\omega_0^2 + x^2}  
+\end{eqnarray}
+The general solution for $a(t)$ is
+\begin{eqnarray}
+  a(t) &=& e^{i\omega_0t/2} \braceb{ Ae^{+i\Omega t/2} +Be^{-i\Omega t/2} } \\
+  b(t) &=& -\frac{2\Omega}{x} e^{-i\omega_0t/2}  \braceb{ Ae^{+i\Omega t/2} -Be^{-i\Omega t/2} } \\
+\end{eqnarray}
+Inf we choose as initial condition $a(0) = 0$ then the solution becomes
+\begin{eqnarray}
+  a(t) &=& e^{i\omega_0t/2} \braceb{\cos(\Omega t/2) - i\frac{\omega_0}{\Omega}\sin(\Omega t/2)} \\
+  b(t) &=& e^{-i\omega_0t/2} \frac{xi}{\Omega} \sin(\Omega t/2)
 \end{eqnarray}
 
 \end{document}

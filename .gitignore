@@ -29,3 +29,6 @@ a.out
 _con*/
 *.aux
 *.dvi
+*.fdb_latexmk
+*.fls
+*.synctex.gz

@@ -84,10 +84,9 @@ TEST(TestEigenplus, TestIntetGdiag) {
   
 }
 TEST(TestEigenplus, TestIntetGdiagRabi) {
-  // see Tannor's book pp.479.
+  // see ${QPBRANCH}/doc/two_state/
   // WARNING:
   // The result in Tannor's book may be wrong.
-  // check with numerical derivative?
 
   mangan4::Con& con = mangan4::Con::getInstance();
   con.set_root("_con_rabi");
@@ -98,10 +97,10 @@ TEST(TestEigenplus, TestIntetGdiagRabi) {
   MatrixXcd H(n,n), S(n,n);
   auto Ea = 0.0;
   auto Eb = 1.0;
-  auto mu_eps = 1.0;
+  auto x = 1.0;
   H <<
-    Ea,      -mu_eps/2,
-    -mu_eps/2, Eb;
+    Ea,  -x/2,
+    -x/2, Eb;
   S <<
     1.0, 0.0, 
     0.0, 1.0;
@@ -118,11 +117,11 @@ TEST(TestEigenplus, TestIntetGdiagRabi) {
     auto t = it*dt;
 
     // analytic solution
-    auto Delta = Ea-Eb;
-    auto Omega = sqrt(pow(Delta,2) + pow(mu_eps,2));  
+    auto w0 = Ea-Eb;
+    auto Omega = sqrt(w0*w0 + x*x);
     auto arg = Omega*t/2;
-    ce(0) = exp(+i*Delta*t/2.0) * (cos(arg) - i*Delta/Omega*sin(arg));
-    ce(1) = exp(-i*Delta*t/2.0) * (mu_eps/(2*Omega)) * 2.0*i * sin(arg);
+    ce(0) = exp(+i*w0*t/2.0) * (cos(arg) - i*w0/Omega*sin(arg));
+    ce(1) = exp(-i*w0*t/2.0) * (x/(2*Omega)) * 2.0*i * sin(arg);
 
     // dump
     con.write_f("t", it, t);
@@ -139,17 +138,17 @@ TEST(TestEigenplus, TestIntetGdiagRabi) {
   EXPECT_DOUBLE_EQ(abs(c(0)), abs(ce(0)));
 }
 TEST(TestEigenplus, TestIntetGdiag_nume) {
-    complex<double> i(0,1);
+  complex<double> i(0,1);
   int n = 2;
   MatrixXcd H(n,n), S(n,n);
 
   auto Ea = 0.2;
   auto Eb = 1.3;
-  auto mu_eps = 1.4;
+  auto x = 1.4;
   //  auto mu_eps = 0.0;
   H <<
-    Ea,      -mu_eps,
-    -mu_eps, Eb;
+    Ea,  -x/2,
+    -x/2, Eb;
   S <<
     1.0, 0.3, 
     0.3, 1.0;
