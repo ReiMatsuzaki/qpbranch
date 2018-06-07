@@ -5,12 +5,19 @@
 namespace qpbranch{
   using mangan4::Con;
 
+  void ShiftParams(double &q, double &p, complex<double> &g, const VectorXd& dotx, double dt) {
+    q += dotx(0) *dt;
+    p += dotx(1) *dt;
+    g += complex<double>(dotx(2), dotx(3))*dt;
+  }
+
   DyNac::DyNac(const OpMat& opHeIJ, const OpMat& opXkIJP, const VectorXi& ns,
 	       string type_gauss, int norder, double dx) :
     numA_(ns.size()), numI_(opHeIJ.shape()[0]),
     q0_(0), p0_(0), gamma0_(1.0,0.0), 
     ns_(ns), m_(1.0),
-    type_gauss_(type_gauss), is_setup_(false), opHeIJ_(opHeIJ), opXkIJP_(opXkIJP) {
+    type_gauss_(type_gauss), type_dotx_("qhamilton"), type_intenuc_("euler"),
+    is_setup_(false), opHeIJ_(opHeIJ), opXkIJP_(opXkIJP) {
 
     assert(type_gauss=="frozen"||type_gauss=="thawed");
     assert(numI_ == (int)opHeIJ.shape()[1]);
@@ -76,12 +83,33 @@ namespace qpbranch{
   }
   void DyNac::Update(double dt) {
     assert(is_setup_);
-
-    this->UpdateBasis();
+    assert(type_dotx_=="qhamilton" || type_intenuc_=="RK4");
 
     // non linear parameter
-    VectorXd dotx(4);
-    this->DotxQhamilton(&dotx);
+    VectorXd dx(4);
+    if(type_intenuc_=="euler") {
+      this->UpdateBasis(); this->Dotx(&dx);
+    } else if(type_intenuc_=="RK4") {
+      VectorXd dotx1(4), dotx2(4), dotx3(4), dotx4(4);
+      
+      this->UpdateBasis(); this->Dotx(&dotx1);
+      
+      ShiftParams(q0_, p0_, gamma0_, dotx1, dt/2);
+      this->UpdateBasis(); this->Dotx(&dotx2);
+      ShiftParams(q0_, p0_, gamma0_, dotx1, -dt/2);
+
+      ShiftParams(q0_, p0_, gamma0_, dotx2, dt/2);
+      this->UpdateBasis(); this->Dotx(&dotx3);
+      ShiftParams(q0_, p0_, gamma0_, dotx2, -dt/2);
+
+      ShiftParams(q0_, p0_, gamma0_, dotx3, dt);
+      this->UpdateBasis(); this->Dotx(&dotx4);
+      ShiftParams(q0_, p0_, gamma0_, dotx3, -dt);
+
+      dx = (dotx1 + 2*dotx2 + 2*dotx3 + dotx4)/6;
+    } else {
+      cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type_dotx" << endl; abort();
+    }
 
     // coefficient
     MatrixXcd H(numA_*numI_,numA_*numI_), S(numA_*numI_,numA_*numI_);    
@@ -90,11 +118,7 @@ namespace qpbranch{
     this->Overlap(&S);
 
     // propagate nonlinear
-    q0_ += dotx(0) *dt;
-    p0_ += dotx(1) *dt;
-    if(type_gauss_=="thawed") {
-      gamma0_ += complex<double>(dotx(2), dotx(3))*dt;
-    }
+    ShiftParams(q0_, p0_, gamma0_, dx, dt);
 
     // propagate coefficient
     IntetGdiag(H, S, dt, &cAI_);
@@ -212,9 +236,10 @@ namespace qpbranch{
 
     
   }
-  void DyNac::DotxQhamilton(VectorXd *res) {
+  void DyNac::Dotx(VectorXd *res) {
     assert(numA_==1);
     assert(res->size()==4);
+    assert(type_dotx_=="qhamilton");
 
     MatrixXcd H(numI_,numI_);
 

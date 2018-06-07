@@ -1,5 +1,4 @@
 #include <iostream>
-#include <qpbranch/dy_branch.hpp>
 #include <qpbranch/dy_nac.hpp>
 #include <qpbranch/con.hpp>
 
@@ -51,10 +50,12 @@ int main() {
   con.write_f1("xs", 0, xs);
 
   // dynamics
-  DyNac *dy = new DyNac(HeIJ, XkIJP, ns, "thawed", 0, 0.01);
-  dy->m_  = 2000.0;
+  DyNac *dy = new DyNac(HeIJ, XkIJP, ns, "thawed", 2, 0.01);
+  dy->type_intenuc_ = "RK4";
+  dy->gamma0_ = 1.0;
   dy->q0_ = -7.0;
   dy->p0_ = +15.0;
+  dy->m_  = 2000.0;
   dy->SetUp();
 
   // time grid

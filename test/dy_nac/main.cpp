@@ -1,11 +1,13 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <qpbranch/gtestplus.hpp>
-#include <qpbranch/dy_branch.hpp>
+#include <qpbranch/dy_mono.hpp>
 #include <qpbranch/dy_nac.hpp>
+#include <qpbranch/con.hpp>
 
 using namespace std;
 using namespace qpbranch;
+using namespace mangan4;
 
 class TestMonoState : public ::testing::Test {
 protected:
@@ -40,13 +42,13 @@ protected:
     dy_nac->UpdateBasis();
     
     // Old
-    dy_old = new DySetPoly(v, ns, "thawed");
+    dy_old = new DySetPoly(v, ns, "thawed", 2, 0.01);
     dy_old->m_   = dy_nac->m_;
     dy_old->gr0_ = dy_nac->gamma0_.real();
     dy_old->gi0_ = dy_nac->gamma0_.imag();
     dy_old->q0_  = dy_nac->q0_;
     dy_old->p0_  = dy_nac->p0_;
-    dy_old->m_   = dy_nac->m_;  
+    dy_old->m_   = dy_nac->m_;
     dy_old->SetUp();
     dy_old->UpdateBasis();
   }
@@ -91,67 +93,363 @@ TEST_F(TestMonoState, Hamiltonian) {
 }
 TEST_F(TestMonoState, Dotx) {
   VectorXd dotx1(4), dotx2(4);
-  dy_nac->DotxQhamilton(&dotx1);
-  dy_old->DotxQhamilton(&dotx2);
+  dy_nac->Dotx(&dotx1);
+  dy_old->Dotx(&dotx2);
   double tol = pow(10.0, -10.0);
   EXPECT_VECTORXD_NEAR(dotx1, dotx2, tol);
 }
 
-TEST(SolveModel, free_particle) {
+TEST(SolveModel, Harmonic) {
+
+  Con& con = Con::getInstance();
+  con.set_root("_con_fp");
+  auto i = complex<double>(0,1);
 
   // basic info
   int num = 1;
   VectorXi ns(num); ns << 0;
 
-  // system
+  // system (Harmonic)
   int numI = 1;
   OpMat opHeIJ(boost::extents[numI][numI]);
   OpMat opXkIJP(boost::extents[numI][numI]);
-  auto w = 0.8;
   auto m = 2.0;
+  auto w = 0.8;  
   auto a = m*w/2;
-  VectorXd xs = VectorXd::LinSpaced(100, -5.0, 5.0);
+  VectorXd xs = VectorXd::LinSpaced(400, -5.0, 5.0);
   VectorXd ys = (m*w*w/2)*xs.array()*xs.array();
   opHeIJ[0][0]  = new OperatorSpline(xs, ys);
   opXkIJP[0][0] = nullptr;
 
   // initial value
   auto q0 = -2.0;
-  auto p0 = +1.0;
+  auto p0 = 0.8;
   auto g0 = complex<double>(1.2, 0.0);
-  //auto g0 = a;
   
   // dynamics
   auto dy = new DyNac(opHeIJ, opXkIJP, ns, "thawed", 2, 0.01);
+  dy->type_intenuc_ = "RK4";
   dy->gamma0_ = g0;
   dy->q0_ = q0;
   dy->p0_ = p0;
   dy->m_  = m;
   dy->SetUp();
 
+  // time
+  auto dt = 0.1;
+  auto nt = 100;
+
+  // exact
+  double q, p;
+  complex<double> g;
+
   // calculate
-  auto dt = 0.001;
-  auto nt = 10;
-  for(int it = 0; it < nt; it++)
-    dy->Update(dt);
-  auto t = dt*nt;
+  for(int it = 0; it < nt; it++) {
+    
+    // time
+    con.write_f("t", it, it*dt);
 
-  // analytic solution. see Tannor's book p.29
-  auto cwt = cos(w*t);
-  auto swt = sin(w*t); 
-  auto i = complex<double>(0,1);
-  auto g = a * (g0*cwt+i*swt) / (a*cwt+i*swt);
-  auto q = q0*cwt + p0/(m*w)*swt;
-  auto p = p0*cwt - (m*w*q0)*swt;
+    // analytic solution
+    auto t = dt*it;
+    auto cwt = cos(w*t);
+    auto swt = sin(w*t);
+    g = a * (g0*cwt+i*a*swt) / (i*g0*swt+a*cwt);
+    q = q0*cwt + p0/(m*w)*swt;
+    p = p0*cwt - (m*w*q0)*swt;
+    con.write_f("exact_q0", it, q);
+    con.write_f("exact_p0", it, p);
+    con.write_f("exact_gr0", it, real(g));
+    con.write_f("exact_gi0", it, imag(g));
 
-  auto tol = pow(10.0, -10.0);
+    // dump calculation
+    dy->DumpCon(it, "");
+
+    // update
+    if(it!=nt-1)
+      dy->Update(dt);
+  }
+  
+  auto tol = 0.00002;
   EXPECT_NEAR(real(g), real(dy->gamma0_), tol);
   EXPECT_NEAR(imag(g), imag(dy->gamma0_), tol);
   EXPECT_NEAR(q,       dy->q0_,           tol);
   EXPECT_NEAR(p,       dy->p0_,           tol);
   
   delete dy;
+}
+TEST(SolveModel, TwoState) {
+  // Two state model with constant potential.
+  // see exact solution in Tannor's book pp.480
+
+  Con& con = Con::getInstance();
+  con.set_root("_con_2state");
+  complex<double> i(0, 1);
+
+  // nuclear basis
+  int numA = 1;
+  VectorXi ns(numA); ns << 0;
+
+  // potential
+  int numI = 2;
+  OpMat opHeIJ(boost::extents[numI][numI]);
+  OpMat opXkIJP(boost::extents[numI][numI]);
+  VectorXd xs = VectorXd::LinSpaced(500, -10.0, 10.0);
+  int nx = xs.size();
+  auto Delta = 1.0;
+  auto mu_eps = 1.0;
+  VectorXd y00s = VectorXd::Zero(nx);
+  VectorXd y11s = VectorXd::Constant(nx, Delta);
+  VectorXd y01s = VectorXd::Constant(nx, -mu_eps);
+  VectorXd y10s = y01s;
+  opHeIJ[0][0] = new OperatorSpline(xs, y00s);
+  opHeIJ[0][1] = new OperatorSpline(xs, y01s);
+  opHeIJ[1][0] = new OperatorSpline(xs, y10s);
+  opHeIJ[1][1] = new OperatorSpline(xs, y11s);
+  opXkIJP[0][0] = nullptr;
+  opXkIJP[0][1] = nullptr;
+  opXkIJP[1][1] = nullptr;
+  opXkIJP[1][0] = nullptr;
+
+  // dynamics
+  auto dy = new DyNac(opHeIJ, opXkIJP, ns, "frozen", 0, 0.01);
+  dy->type_intenuc_ = "RK4";
+  dy->gamma0_ = 1.0;
+  dy->q0_ = 0.0;
+  dy->p0_ = 0.0;
+  dy->m_  = 2000.0;
+  dy->SetUp();
+
+  // time
+  auto dt = 0.1;
+  auto nt = 100;
+
+  // exact solution
+  VectorXcd cs(2);
+
+  // calculate
+  for(int it = 0; it < nt; it++) {
+    
+    // time
+    auto t = dt*it;
+    con.write_f("t", it, t);
+
+    // analytic solution
+    double Omega = sqrt(pow(Delta,2) + pow(mu_eps,2));
+    auto arg = Omega*t/2.0;
+    cs(0) = exp(+i*Delta*t/2.0) * (cos(arg) - i*Delta/Omega*sin(arg));
+    cs(1) = exp(-i*Delta*t/2.0) * mu_eps/(2*Omega) * 2.0*i*sin(arg);
+    con.write_f1("exact_cr", it, cs.real());
+    con.write_f1("exact_ci", it, cs.imag());
+
+    // dump calculation results
+    dy->DumpCon(it);
+    
+    if(it!=nt-1)
+      dy->Update(dt);
+  }
+
+  auto tol = 0.00002;
+  EXPECT_VECTORXCD_NEAR(cs, dy->cAI_, tol);
   
+}
+TEST(SolveModel, TwoConst) {
+
+  // nuclear basis
+  int numA = 1;
+  VectorXi ns(numA); ns << 0;
+
+  // potential
+  int numI = 2;
+  OpMat opHeIJ(boost::extents[numI][numI]);
+  OpMat opXkIJP(boost::extents[numI][numI]);
+  VectorXd xs = VectorXd::LinSpaced(500, -10.0, 10.0);
+  int nx = xs.size();
+  auto Delta = 1.0;
+  auto mu_eps = 1.0;
+  VectorXd y00s = VectorXd::Zero(nx);
+  VectorXd y11s = VectorXd::Constant(nx, Delta);
+  VectorXd y01s = VectorXd::Constant(nx, -mu_eps);
+  VectorXd y10s = y01s;
+  opHeIJ[0][0] = new OperatorSpline(xs, y00s);
+  opHeIJ[0][1] = new OperatorSpline(xs, y01s);
+  opHeIJ[1][0] = new OperatorSpline(xs, y10s);
+  opHeIJ[1][1] = new OperatorSpline(xs, y11s);
+  opXkIJP[0][0] = nullptr;
+  opXkIJP[0][1] = nullptr;
+  opXkIJP[1][1] = nullptr;
+  opXkIJP[1][0] = nullptr;
+
+  // dynamics
+  auto dy = new DyNac(opHeIJ, opXkIJP, ns, "frozen", 0, 0.01);
+  dy->type_intenuc_ = "RK4";
+  dy->gamma0_ = 1.0;
+  dy->q0_ = 0.0;
+  dy->p0_ = 0.0;
+  dy->m_  = 2000.0;
+  dy->SetUp();
+
+  // Matrix
+  int n = numA*numI;
+  MatrixXcd H(n,n), S(n,n);
+  dy->Overlap(&S);
+  dy->Hamiltonian(dy->id_, &H);
+
+  EXPECT_DOUBLE_EQ(Delta,   real(H(1,1)-H(0,0)));
+  EXPECT_DOUBLE_EQ(-mu_eps, real(H(0,1)));
+  EXPECT_DOUBLE_EQ(-mu_eps, real(H(1,0)));
+
+  EXPECT_DOUBLE_EQ(1.0, real(S(0,0)));
+  EXPECT_DOUBLE_EQ(1.0, real(S(1,1)));
+  EXPECT_DOUBLE_EQ(0.0, real(S(0,1)));
+  EXPECT_DOUBLE_EQ(0.0, real(S(1,0)));
+}
+TEST(SolveModel, Tully1) {
+  // Calculation for Tully Type I model.
+  // See numerically exact resutls at ${WPDY}/example/tully1
+
+  Con& con = Con::getInstance();
+  con.set_root("_con_tully1");
+
+  // basic info
+  int numA = 1;
+  VectorXi ns(numA); ns << 0;
+  
+  // potential
+  int numI = 2;
+  OpMat opHeIJ(boost::extents[numI][numI]);
+  OpMat opXkIJP(boost::extents[numI][numI]);
+  VectorXd xs = VectorXd::LinSpaced(500, -10.0, 10.0);
+  double A = 0.01;
+  double B = 1.6;
+  double C = 0.005;
+  double D = 1.0;
+  VectorXd y00s(xs.size());
+  VectorXd y01s(xs.size());
+  VectorXd y10s(xs.size());
+  VectorXd y11s(xs.size());
+  for(int i = 0; i < xs.size(); i++) {
+    auto x = xs(i);
+    if(x>0)
+      y00s(i) = +A*(1-exp(-B*x));
+    else
+      y00s(i) = -A*(1-exp(+B*x));
+    y01s(i) = C*exp(-D*x*x);
+    y10s(i) = y01s(i);
+    y11s(i) = -y00s(i);
+  }
+  opHeIJ[0][0] = new OperatorSpline(xs, y00s);
+  opHeIJ[0][1] = new OperatorSpline(xs, y01s);
+  opHeIJ[1][0] = new OperatorSpline(xs, y10s);
+  opHeIJ[1][1] = new OperatorSpline(xs, y11s);
+  opXkIJP[0][0] = nullptr;
+  opXkIJP[0][1] = nullptr;
+  opXkIJP[1][1] = nullptr;
+  opXkIJP[1][0] = nullptr;
+
+  // save
+  con.write_f1("xs", 0, xs);
+
+  // dynamics
+  auto dy = new DyNac(opHeIJ, opXkIJP, ns, "thawed", 2, 0.01);
+  dy->type_intenuc_ = "RK4";
+  dy->gamma0_ = 1.0;
+  dy->q0_ = -7.0;
+  dy->p0_ = 15.0;
+  dy->m_  = 2000.0;
+  dy->SetUp();
+
+  // time
+  auto dt = 20.0;
+  auto nt = 100;
+
+  // calculate
+  for(int it = 0; it < nt; it++) {
+    con.write_f("t", it, it*dt);
+    dy->DumpCon(it);
+    for(int I = 0; I < 2; I++) {
+      VectorXcd ys(xs.size());
+      dy->At(I, xs, &ys);
+      con.write_f1("psi_"+to_string(I)+"_re", it, ys.real() );
+      con.write_f1("psi_"+to_string(I)+"_im", it, ys.imag() );
+    }
+  
+    if(it!=nt-1)
+      dy->Update(dt);
+  }
+  
+  delete dy;
+}
+TEST(SolveModel, Tully2) {
+  // Calculation for Tully Type II model.
+  // See numerically exact resutls at ${WPDY}/example/tully2_dvr
+
+  Con& con = Con::getInstance();
+  con.set_root("_con_tully2");
+
+  // basic info
+  int numA = 1;
+  VectorXi ns(numA); ns << 0;
+  
+  // potential
+  int numI = 2;
+  OpMat opHeIJ(boost::extents[numI][numI]);
+  OpMat opXkIJP(boost::extents[numI][numI]);
+  VectorXd xs = VectorXd::LinSpaced(500, -10.0, 10.0);
+  int nx = xs.size();
+  double A = 0.1;
+  double B = 0.28;
+  double C = 0.015;
+  double D = 0.06;
+  double E = 0.05;
+  VectorXd y00s = VectorXd::Zero(nx);
+  VectorXd y01s(nx), y10s(nx), y11s(nx);
+  for(int i = 0; i < xs.size(); i++) {
+    auto x = xs(i);
+    y01s(i) = C*exp(-D*x*x);
+    y10s(i) = y01s(i);
+    y11s(i) = -A*exp(-B*x*x) + E;
+  }
+  opHeIJ[0][0] = new OperatorSpline(xs, y00s);
+  opHeIJ[0][1] = new OperatorSpline(xs, y01s);
+  opHeIJ[1][0] = new OperatorSpline(xs, y10s);
+  opHeIJ[1][1] = new OperatorSpline(xs, y11s);
+  opXkIJP[0][0] = nullptr;
+  opXkIJP[0][1] = nullptr;
+  opXkIJP[1][1] = nullptr;
+  opXkIJP[1][0] = nullptr;
+
+  // save
+  con.write_f1("xs", 0, xs);
+
+  // dynamics
+  auto dy = new DyNac(opHeIJ, opXkIJP, ns, "thawed", 2, 0.01);
+  dy->type_intenuc_ = "RK4";
+  dy->gamma0_ = 1.0;
+  dy->q0_ = -7.0;
+  dy->p0_ = 20.0;
+  dy->m_  = 2000.0;
+  dy->SetUp();
+
+  // time
+  auto dt = 10.0;
+  auto nt = 150;
+
+  // calculate
+  for(int it = 0; it < nt; it++) {
+    con.write_f("t", it, it*dt);
+    dy->DumpCon(it);
+    for(int I = 0; I < 2; I++) {
+      VectorXcd ys(xs.size());
+      dy->At(I, xs, &ys);
+      con.write_f1("psi_"+to_string(I)+"_re", it, ys.real() );
+      con.write_f1("psi_"+to_string(I)+"_im", it, ys.imag() );
+    }
+  
+    if(it!=nt-1)
+      dy->Update(dt);
+  }
+  
+  delete dy;
 }
 
 class TestNonCoupled : public ::testing::Test {
@@ -247,9 +545,6 @@ TEST(TestCoupled, Matrix) {
 
   MatrixXcd H(numA*numI,numA*numI);
   dy->Hamiltonian(dy->id_, &H);
-  cout << H << endl;
-  cout << y00s(110) << " " << y01s(110) << endl;
-  cout << y10s(110) << " " << y11s(110) << endl;
   MatrixXcd P2(numA,numA);
   dy->basis_->Matrix(dy->id_, dy->p2_, &P2);
   auto e0 = P2(0,0)/(2.0*dy->m_);
@@ -258,3 +553,5 @@ TEST(TestCoupled, Matrix) {
   EXPECT_NEAR(real( y01s(110)), real(H(0,1)), pow(10.0,-10));
   EXPECT_NEAR(real( y10s(110)), real(H(1,0)), pow(10.0,-10));
 }
+
+

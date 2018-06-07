@@ -26,4 +26,6 @@ a.out
 *.d
 *.dSYM
 **/auto/
-_con/
+_con*/
+*.aux
+*.dvi

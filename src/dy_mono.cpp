@@ -1,6 +1,6 @@
 #include <boost/multi_array.hpp>
 #include <qpbranch/pwgto.hpp>
-#include <qpbranch/dy_branch.hpp>
+#include <qpbranch/dy_mono.hpp>
 #include <qpbranch/eigenplus.hpp>
 #include <qpbranch/con.hpp>
 
@@ -12,15 +12,20 @@ namespace qpbranch {
   using namespace std;
   using namespace mangan4;
 
-  DySetPoly::DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss) {
+  void ShiftParams(double &q, double &p, double &gr, double &gi,
+		   const VectorXd& dx, double dt) {
+    q += dx[0]*dt;
+    p += dx[1]*dt;
+    gr += dx[2]*dt;
+    gi += dx[3]*dt;
+  }
+
+  DySetPoly::DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss,
+		       int norder, double dx) {
 
     assert(type_gauss=="frozen"||type_gauss=="thawed");
 
     num_ = ns.size();
-    if(type_gauss=="frozen") 
-      numopt_ = 2;
-    else
-      numopt_ = 4;
     
     q0_ = 0.0;
     p0_ = 0.0;
@@ -28,11 +33,11 @@ namespace qpbranch {
     gi0_ = 0.0;
     c_ = VectorXcd::Zero(num_);
     c_(0) = 1.0;
-
     m_ = 1.0;
 
     type_gauss_ = type_gauss;
-    type_eomslow_ = "qhamilton";
+    type_dotx_ = "qhamilton";
+    type_intenuc_ = "euler";
 
     is_setup_ = false;
     
@@ -42,8 +47,6 @@ namespace qpbranch {
     DR_ = new OperatorDa(kIdDR);
     DP_ = new OperatorDa(kIdDP);
     vector<Operator*> ops = {id_, pot_, p2_, DR_, DP_};
-    ops_opt_.push_back(DR_);
-    ops_opt_.push_back(DP_);
     if(type_gauss=="frozen") {
       Dgr_ = nullptr;
       Dgi_ = nullptr;
@@ -52,15 +55,13 @@ namespace qpbranch {
       Dgi_ = new OperatorDa(kIdDgi);
       ops.push_back(Dgr_);
       ops.push_back(Dgi_);
-      ops_opt_.push_back(Dgr_);
-      ops_opt_.push_back(Dgi_);
     }
 
     w_ = VectorXd::Zero(num_);
     U_ = MatrixXcd::Zero(num_,num_);
     Clam_ = VectorXcd::Zero(num_);
     
-    basis_ = new Pwgto(ns, ops);
+    basis_ = new Pwgto(ns, ops, norder, dx);
     
   }
   void DySetPoly::SetUp() {
@@ -80,27 +81,38 @@ namespace qpbranch {
     this->UpdateBasis();
 
     // slow part
-    VectorXd dotx(numopt_);
-    if(type_eomslow_=="qhamilton") {
-      this->DotxQhamilton(&dotx);
-    } else if(type_eomslow_=="tdvp") {
-      this->DotxQuantum(true, &dotx);					       
-    } else if(type_eomslow_=="mp") {
-      this->DotxQuantum(false, &dotx);
+    VectorXd dx(4);
+    if(type_intenuc_=="euler") {
+      this->Dotx(&dx);
+    } else if(type_intenuc_=="RK4") {
+      VectorXd dx1(4), dx2(4), dx3(4), dx4(4);
+
+      this->UpdateBasis(); this->Dotx(&dx1);
+
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx1, +dt/2);
+      this->UpdateBasis(); this->Dotx(&dx2);
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx1, -dt/2);
+
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx2, +dt/2);
+      this->UpdateBasis(); this->Dotx(&dx3);
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx2, -dt/2);
+
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx3, +dt);
+      this->UpdateBasis(); this->Dotx(&dx4);
+      ShiftParams(q0_, p0_, gr0_, gi0_, dx3, -dt);
+
+      dx = (dx1+2*dx2+2*dx3+dx4)/6;
+    } else {
+      throw runtime_error("invalid type_intenuc");
     }
 
     // fast part
     MatrixXcd H(num_,num_), S(num_,num_);
     basis_->Matrix(id_, id_, &S);
-    this->EffHamiltonian(dotx, &H);    
+    this->EffHamiltonian(dx, &H);    
 
     // propagate slow part
-    q0_ += dotx(0) * dt;
-    p0_ += dotx(1) * dt;
-    if(type_gauss_=="thawed") {
-      gr0_ += dotx(2) * dt;
-      gi0_ += dotx(3) * dt;
-    }
+    ShiftParams(q0_, p0_, gr0_, gi0_, dx, dt);
 
     // propagate fast part
     IntetGdiag(H, S, dt, &c_);
@@ -116,8 +128,18 @@ namespace qpbranch {
     Clam_ = U_.adjoint() * S * c_;
 
     this->Hamiltonian(id_, &H);
-    cerr  << "E = " << (c_.dot(H*c_)).real() << endl; // => E = 0.11275
     
+  }
+  void DySetPoly::Dotx(VectorXd *res) {
+    if(type_dotx_=="qhamilton") {
+      this->DotxQhamilton(res);
+    } else if(type_dotx_=="tdvp") {
+      this->DotxQuantum(true, res);					       
+    } else if(type_dotx_=="mp") {
+      this->DotxQuantum(false, res);
+    } else {
+      cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type_dotx" << endl; abort();
+    }
   }
   //
   // see 2018_aadf/0508_doc for detail.
@@ -143,23 +165,21 @@ namespace qpbranch {
     assert(is_setup_);
     
     MatrixXcd H(num_,num_);
-    
-    for(int iop = 0; iop < (int)ops_opt_.size(); iop++) {
-      if(ops_opt_[iop] == DR_) {
-	this->Hamiltonian(DP_, &H);
-	(*res)[iop] = 2.0 * real(c_.dot(H*c_));
-      } else if(ops_opt_[iop] == DP_) {
-	this->Hamiltonian(DR_, &H);
-	(*res)[iop] = -2.0 * real(c_.dot(H*c_));
-      } else if(ops_opt_[iop] == Dgr_) {
-	this->Hamiltonian(Dgi_, &H);
-	(*res)[iop] = (4.0*gr0_*gr0_) * 2.0 * real(c_.dot(H*c_));
-      } else if(ops_opt_[iop] == Dgi_) {
-	this->Hamiltonian(Dgr_, &H);
-	(*res)[iop] = (-4.0*gr0_*gr0_) * 2.0 * real(c_.dot(H*c_));
-      } else {
-	throw runtime_error("invalid iop");
-      }      
+
+    this->Hamiltonian(DP_, &H);
+    (*res)[0] = 2.0 * real(c_.dot(H*c_));
+
+    this->Hamiltonian(DR_, &H);
+    (*res)[1] = -2.0 * real(c_.dot(H*c_));
+
+    if(type_gauss_=="frozen") {
+      (*res)[2] = 0.0;
+      (*res)[3] = 0.0;
+    } else {
+      this->Hamiltonian(Dgi_, &H);
+      (*res)[2] = 4*gr0_*gr0_ * 2.0 * real(c_.dot(H*c_));
+      this->Hamiltonian(Dgr_, &H);      
+      (*res)[3] = -4*gr0_*gr0_ * 2.0 * real(c_.dot(H*c_));;
     }
     
   }
@@ -167,33 +187,46 @@ namespace qpbranch {
 
     assert(is_setup_);
 
-    VectorXcd v(num_), v1(num_);
-    MatrixXd C(numopt_,numopt_);
-    VectorXd y(numopt_);
-    
-    multi_array<MatrixXcd, 2> Snm(extents[numopt_+1][numopt_+1]);
-    multi_array<MatrixXcd, 1> Hn0(extents[numopt_+1]);
-    vector<Operator*> ops(ops_opt_);
+    int numopt = 0;
+    vector<Operator*> ops;    
+    ops.push_back(DR_);
+    ops.push_back(DP_);
+    if(type_gauss_=="frozen") {
+      numopt = 2;
+    } else if(type_gauss_=="thawed") {
+      numopt = 4;
+      ops.push_back(Dgr_);
+      ops.push_back(Dgi_);
+    } else {
+      cerr << __FILE__ << ":" << __LINE__ << ":Error invalid type gauss" << endl; abort();
+    }
     ops.push_back(id_);
 
-    int id = numopt_; // index for operator id_
+    VectorXcd v(num_), v1(num_);
+    MatrixXd C(numopt,numopt);
+    VectorXd y(numopt);
+    
+    multi_array<MatrixXcd, 2> Snm(extents[numopt+1][numopt+1]);
+    multi_array<MatrixXcd, 1> Hn0(extents[numopt+1]);
 
-    for(int n = 0; n < 1+numopt_; n++) {
+    int id = numopt; // index for operator id_
+
+    for(int n = 0; n < 1+numopt; n++) {
       Hn0[n] = MatrixXcd::Zero(num_,num_);
-      for(int m = 0; m < 1+numopt_; m++) {
+      for(int m = 0; m < 1+numopt; m++) {
 	Snm[n][m] = MatrixXcd::Zero(num_,num_);
       }
     }
 
-    for(int n = 0; n < 1+numopt_; n++) {
+    for(int n = 0; n < 1+numopt; n++) {
       this->Hamiltonian(ops[n], &Hn0[n]);
-      for(int m = 0; m < 1+numopt_; m++) {	
+      for(int m = 0; m < 1+numopt; m++) {	
 	basis_->Matrix(ops[n], ops[m], &(Snm[n][m]));
       }
     }
 
-    for(int n = 0; n < numopt_; n++) {
-      for(int m = 0; m < numopt_; m++) {
+    for(int n = 0; n < numopt; n++) {
+      for(int m = 0; m < numopt; m++) {
 	auto t1 = c_.dot(Snm[n][m]*c_);
 	v = Snm[id][m]*c_;
 	Zgesv(Snm[id][id], v, &v1);
@@ -227,10 +260,21 @@ namespace qpbranch {
     MatrixXcd  M(num_,num_);
     MatrixXcd& res(*ptr_res);
     this->Hamiltonian(id_, &res);
-    for(int iop = 0; iop < (int)ops_opt_.size(); iop++) {
-      basis_->Matrix(id_, ops_opt_[iop], &M);
-      res += -ii*M*dotx[iop];
+
+    basis_->Matrix(id_, DR_, &M);
+    res += -ii*M*dotx[0];
+
+    basis_->Matrix(id_, DP_, &M);
+    res += -ii*M*dotx[1];
+
+    if(type_gauss_=="thawed") {
+      basis_->Matrix(id_, Dgr_, &M);
+      res += -ii*M*dotx[2];
+      
+      basis_->Matrix(id_, Dgi_, &M);
+      res += -ii*M*dotx[3];
     }
+
   }
   double DySetPoly::Norm2() const {
     MatrixXcd S(num_,num_);
@@ -256,9 +300,15 @@ namespace qpbranch {
     Con& con = Con::getInstance();
     
     this->UpdateBasis();
-    basis_->DumpCon(it);
+    //    basis_->DumpCon(it);
+    con.write_f(prefix+"q0",  it, q0_);
+    con.write_f(prefix+"p0",  it, p0_);
+    con.write_f(prefix+"gr0", it, gr0_);
+    con.write_f(prefix+"gi0", it, gi0_);
 
     if(it==0) {
+      con.write_f(prefix+"m",   0, m_);
+      con.write_i(prefix+"num", 0, num_);
       if(xs_.size()!=0) {
 	con.write_f1("_x", 0, xs_);
       }
@@ -287,7 +337,6 @@ namespace qpbranch {
     double norm2 = Norm2();
     con.write_f("norm2", it, norm2);
   }
-
   /*
   DyPsa::DyPsa(int max_path, Operator *pot, const VectorXi& ns, string type_gauss):
     max_path_(max_path), ns_(ns)

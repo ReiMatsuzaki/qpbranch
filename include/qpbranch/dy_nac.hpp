@@ -27,10 +27,10 @@ namespace qpbranch {
     double m_;
     // basis functions
     Operator *id_, *r1_, *r2_, *p1_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
-    Pwgto *basis_;
-  private:
+    Pwgto *basis_;  
     // options
-    std::string type_gauss_;
+    std::string type_gauss_, type_dotx_, type_intenuc_;
+  private:
     // intermediate
     bool is_setup_;
     OpMat opHeIJ_;
@@ -49,7 +49,7 @@ namespace qpbranch {
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
     void EffHamiltonian(const VectorXd& dotx, MatrixXcd *res);
     void Overlap(MatrixXcd *res);
-    void DotxQhamilton(VectorXd *res);
+    void Dotx(VectorXd *res);
     void CalcProb(VectorXd *res);
     // IO
     void DumpCon(int it, string prefix="");

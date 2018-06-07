@@ -9,6 +9,7 @@ main.x: main.o ${libqpbranch}
 all: main.x
 	./$<
 clean:
-	${RM} *.x *.o *.d
-
+	${RM} *.x *.o *.d *.pdf
+	${RM} -r _con*
+	${RM} -r _fig*
 

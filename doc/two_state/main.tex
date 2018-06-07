@@ -1,0 +1,75 @@
+\documentclass[a4paper]{article}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{braket}
+\usepackage{amsmath}
+
+\makeatletter
+\renewcommand{\theequation}{  
+  \thesection.\arabic{equation} }
+  \@addtoreset{equation}{section}
+\makeatother
+
+\def\vector#1{\mbox{\boldmath $#1$}}
+\def\braces#1{\left( #1 \right)}
+\def\bracem#1{\left\{ #1 \right\}}
+\def\braceb#1{\left[ #1 \right]}
+\def\lefts{\left(}
+\def\rights{\right)}
+\def\leftb{\left[}
+\def\rightb{\right]}
+\def\leftm{\left\{}
+\def\rightm{\right\}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pdd}[3]{\frac{\partial^2 #1}{\partial #2 \partial #3}}
+\begin{document}
+\title{Analytic solution of two level dynamics}
+\author{Rei Matsuzaki}
+\maketitle
+
+\section{Introduction}
+In this documents, I derive the analytic solution for dynamics in two-level sytems.
+I used atomic unit in the formulation.
+
+\section{Two level model}
+Consider a system with Hamiltonian $H_0$ having only two eigenstates, $\psi_a$ and $\psi_b$,
+with eigen energies $E_a$ and $E_b$. The most general wave function for this system may be
+written as
+\begin{eqnarray}
+  \Psi(t) = a(t)e^{-iE_at}\psi_a + b(t)e^{-iE_bt}\psi_b.
+\end{eqnarray}
+If the system is coupled via matrix element $-x/2$, the coefficient $a(t)$ and $b(t)$
+obey the coupled equation
+\begin{eqnarray}
+  i \frac{d}{dt}
+  \begin{pmatrix}
+    a e^{-iE_at} \\
+    b e^{-iE_bt}
+  \end{pmatrix}
+  =  
+  \begin{pmatrix}
+    E_a          & -\frac{x}{2} \\
+    -\frac{x}{2} & E_b
+  \end{pmatrix}
+  \begin{pmatrix}
+    a(t)e^{-iE_at} \\
+    b(t)e^{-iE_bt}
+  \end{pmatrix}
+\end{eqnarray}
+This leads to a system of differential equation for the expansion coefficient
+\begin{eqnarray}
+  i\dot{a}(t) &=& \frac{ix}{2}b(t)e^{-i\omega_0t}  \label{eq:dota} \\
+  i\dot{b}(t) &=& \frac{ix}{2}a(t)e^{+i\omega_0t}. \label{eq:dotb}
+\end{eqnarray}
+By taking another time derivative of Eq. (\ref{eq:dota}) and substituting for $\dot{b}$
+we obtain the second order differential equation
+\begin{eqnarray}
+  i\ddot{a}(t)
+  &=& \frac{\omega_0}{2}b(t)e^{-i\omega_0t} + \frac{ix}{2}\dot{b}(t)e^{-i\omega_0t} \\
+  &=& \omega_0\dot{a}(t) - i \frac{|x|^2}{4}a(t).
+\end{eqnarray}
+To solve this equation, we substitute a trial function $a(t)=\exp(\lambda t)$ and obtain
+\begin{eqnarray}
+  \lambda^2 + i \omega_0\lambda + \frac{x^2}{4} = 0
+\end{eqnarray}
+
+\end{document}

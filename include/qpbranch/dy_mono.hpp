@@ -12,25 +12,25 @@ namespace qpbranch {
   class DySetPoly {
   public:
     // size
-    int num_, numopt_;
+    int num_;
     // variable     
     double q0_, p0_, gr0_, gi0_;
     VectorXcd c_;
     // const
     double m_;
+    // basis functions
+    Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
+    Pwgto *basis_;
     // options
-    string type_gauss_, type_eomslow_;
+    string type_gauss_, type_dotx_, type_intenuc_;
     // intermediate
     bool is_setup_;
-    Operator *pot_, *id_, *p2_, *DR_, *DP_, *Dgr_, *Dgi_;
-    vector<Operator*> ops_opt_;
     VectorXd w_;    
     MatrixXcd U_;
     VectorXcd Clam_;
-    Pwgto *basis_;
     VectorXd xs_; // grid for dumping wave functions.
     // Main
-    DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss);
+    DySetPoly(Operator *pot, const VectorXi& ns, string type_gauss, int norder, double dx);
     void SetUp();
     void Update(double dt);
     // Accessor
@@ -38,6 +38,7 @@ namespace qpbranch {
     // Calc
     // calculate time derivative of non linear real parameters with Hamilton equation for
     // quantum Hamiltonian. The results are the same when single gaussian is applied.  
+    void Dotx(VectorXd *res);
     void DotxQhamilton(VectorXd *res);
     void DotxQuantum(bool is_tdvp, VectorXd *res);
     void Hamiltonian(Operator *op_bra, MatrixXcd *res);
@@ -47,8 +48,6 @@ namespace qpbranch {
     void At(const VectorXd& xs, VectorXcd *ys) const;
     void DumpCon(int it, string prefix);
   };
-
-
   /*
   // Dynamics mode for each path
   enum DyMode { kNone, kSet, kPsa };

@@ -10,10 +10,16 @@ namespace qpbranch {
   
   using Eigen::GeneralizedSelfAdjointEigenSolver;
   void Zhegv(const MatrixXcd& H, const MatrixXcd& S, MatrixXcd *U, VectorXd *w) {
+    int n = H.cols();
+    assert(n==H.rows());
+    assert(n==S.rows());
+    assert(n==S.cols());
+    
     GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
     es.compute(H, S);
     *w = es.eigenvalues();
     *U = es.eigenvectors();
+    
   }
   void Zgesv(const MatrixXcd& M, const VectorXcd& b, VectorXcd *x) {
     Eigen::FullPivLU<MatrixXcd> lu(M);
