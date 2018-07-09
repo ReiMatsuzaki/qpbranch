@@ -40,7 +40,7 @@ namespace qpbranch {
     virtual void At(Pwgto1c *basis, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res)=0;
   };
   // Buffer for basic case. op.phi_A can be represented by polynomial times gauss function
-  //     op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA)) 
+  // op.phi_A = sum_i c[A][i] (q-qA)^n[A][i] Exp(-gA(q-qA)^2 + ipA(q-qA)) 
   class OpBufBasic : public OpBuf {
   protected:
     int num_;
@@ -96,11 +96,19 @@ namespace qpbranch {
   };
   // Buffer for Da operator
   class OpBufDa : public OpBufBasic {
-    int id_;
+    int id_;    
   public:    
     OpBufDa(const VectorXi& ns, int id);
     //    OpBufDa(const Polys& poly, int n);
     int id() const { return id_; }
+    void SetUp(Pwgto *basis);
+    void SetUp(Pwgto1c *basis);
+  };
+  // Buffer for polynomial operator
+  class OpBufPoly : public OpBufBasic {
+    OperatorPoly *op_;
+  public:
+    OpBufPoly(const VectorXi& ns, OperatorPoly *op);
     void SetUp(Pwgto *basis);
     void SetUp(Pwgto1c *basis);
   };

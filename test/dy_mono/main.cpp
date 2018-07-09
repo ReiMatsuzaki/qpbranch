@@ -7,6 +7,25 @@ using namespace std;
 using namespace qpbranch;
 using namespace mangan4;
 
+TEST(TestDyMono, At) {
+  
+  int num = 1;
+  VectorXi ns(num); ns << 0;
+  VectorXd xs = VectorXd::LinSpaced(400, -10.0, 10.0);
+  VectorXd ys = xs;
+  auto vop = new OperatorSpline(xs, ys);
+
+  auto dy = new DySetPoly(vop, ns, "thawed", 2, 0.001);
+  dy->SetUp();
+  
+  VectorXd x(1);
+  VectorXcd y(1);
+  x(0) = 1.0;
+  dy->At(x, &y);
+
+  cerr << y << endl;
+  
+}
 TEST(TestDyMono, FreeParticle) {
 
   Con& con = Con::getInstance();
@@ -157,4 +176,5 @@ TEST(TestDyMono, Harmonic) {
   
   delete dy;  
 }
+
 

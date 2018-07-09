@@ -9,6 +9,7 @@ namespace qpbranch {
 
   using std::string;
   using std::complex;
+  using Eigen::VectorXi;
   using Eigen::VectorXd;
   using Eigen::VectorXcd;
   
@@ -56,6 +57,14 @@ namespace qpbranch {
       v0_(v0), b_(b), q0_(q0) {}
     void At(const VectorXd& xs, VectorXcd *res) const;
     string str() const;
+  };
+  class OperatorPoly : public OperatorPot {
+  public:
+    int maxn_;
+    VectorXd cs_;    
+    OperatorPoly(int maxn, const VectorXd& cs);
+    void At(const VectorXd& xs, VectorXcd *res) const;
+    string str() const { return "poly"; }
   };
   class OperatorSpline : public OperatorPot {
     boost::math::cubic_b_spline<double> *spline_;

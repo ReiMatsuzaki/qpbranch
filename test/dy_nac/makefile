@@ -11,8 +11,8 @@ main.x: main.o ${libqpbranch} ${libgtest_main}
 .PHONY: all clean plot
 all: main.x
 	./$<
-plot:
-	python plot_tully1.py
+	python plot.py
+
 clean:
 	${RM} *.x *.o *.d
 	${RM} -r _con*

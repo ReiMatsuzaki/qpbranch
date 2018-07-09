@@ -6,6 +6,27 @@ using namespace std;
 using namespace qpbranch;
 using namespace Eigen;
 
+TEST(utest_math, test_fact) {
+  ASSERT_EQ(1, Fact(0));
+  ASSERT_EQ(1, Fact(1));
+  ASSERT_EQ(2, Fact(2));
+  ASSERT_EQ(6, Fact(3));
+  ASSERT_EQ(24, Fact(4));
+  ASSERT_EQ(120, Fact(5));  
+}
+TEST(utest_math, test_comb) {
+  
+  ASSERT_EQ(1, Comb(3,0));
+  ASSERT_EQ(1, Comb(3,3));
+
+  ASSERT_EQ(3, Comb(3,1));
+  ASSERT_EQ(3, Comb(3,2));
+
+  ASSERT_EQ(4, Comb(4,1));
+  ASSERT_EQ(6, Comb(4,2));  // 4.3/2.1 = 6
+  ASSERT_EQ(4, Comb(4,3));
+  
+}
 TEST(utest_math, test_gtoint2n) {
   VectorXcd res(5);
   complex<double> a(2.0);

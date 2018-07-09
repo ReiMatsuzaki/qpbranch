@@ -8,6 +8,10 @@ namespace qpbranch {
   using Eigen::VectorXcd;  
   using std::complex;
 
+  // give a combination
+  int Fact(int n);
+  // give number of combination nCk
+  int Comb(int n, int k);
   // Give an array of integration
   //       { Int_{-oo}^{+oo} x^n Exp[-zx^2] dx   |   n = 0,...,maxn }.
   void IntGto2N(int maxN, complex<double> z, VectorXcd *res);

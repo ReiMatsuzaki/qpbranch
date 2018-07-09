@@ -32,3 +32,4 @@ _con*/
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+tryerr/

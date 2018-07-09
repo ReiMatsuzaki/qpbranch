@@ -390,105 +390,38 @@ TEST(utest_pwgto, one_center) {
   }
   
 }
-TEST(utest_pwgto, test_poly) {
-
-  /*
-  
-  complex<double> b(1.3);
-  complex<double> v0(1.2);
-  complex<double> q0(0.0);
-  auto opid = new OperatorId();
-  auto opR1 = new OperatorRn(1);
-  auto opR2 = new OperatorRn(2);
-  auto opP1 = new OperatorPn(1);
-  auto opP2 = new OperatorPn(2);
-  auto opDR = new OperatorDa(kIdDR);
-  auto opDP = new OperatorDa(kIdDP);
-  auto opV  = new OperatorGausspot(v0, b, q0);
-  vector<Operator*> ops = {opid, opR1, opR2, opP1, opP2, opDR, opDP, opV};
-
-  double R0 = 0.1;
-  double P0 = 2.0;
-  complex<double> g0(1.0,0.2);
-  int num = 3;
-  VectorXi ns(num); ns << 0, 1, 2;
-    
-  auto *basis1 = new Pwgto1c(  ns, R0, P0, g0, ops);
-  basis1->SetUp();
-
-  vector<Poly> polys;
-  polys.push_back(Poly({{1.0, 0}}));
-  polys.push_back(Poly({{1.0, 1}}));
-  polys.push_back(Poly({{1.0, 2}}));
-  auto *basis2 = new PolyPwgto(polys, ops);
-  basis2->SetUp();
-  
-  double tol = pow(10.0, -12.0);
-
-  MatrixXcd M1(num,num);
-  MatrixXcd M2(num,num);
-  for(auto op1 : ops) {
-    for(auto op2 : ops) {
-      if(op1==opV)
-	continue;
-      basis1->Matrix(op1, op2, &M1);
-      basis2->Matrix(op1, op2, &M2);
-      for(int A = 0; A < num; A++) {
-	for(int B = 0; B < num; B++) {
-	  ASSERT_NEAR(M1(A,B).real(), M2(A,B).real(), tol) <<
-	    "op1:" << op1->str() << endl <<
-	    "op2:" << op2->str() << endl <<
-	    " A :" << A << endl <<
-	    " B :" << B << endl;
-	  ASSERT_NEAR(M1(A,B).imag(), M2(A,B).imag(), tol) <<
-	    "op1:" << op1->str() << endl <<
-	    "op2:" << op2->str() << endl <<
-	    " A :" << A << endl <<
-	    " B :" << B << endl;
-	}
-      }
-    }
-  }
-
-  */
-  
-}
 TEST(utest_pwgto, test_spline) {
+  // check for matrix element of V(x) = k/2 x^2
+  //                                  = k/2 (x-R0)^2 + k.R0(x-R0) - k/2.R0.R0 + k.R0.R0
 
-  auto k = 1.0;
+  auto k = 2.3;
   VectorXd xs = VectorXd::LinSpaced(100, -5.0, 5.0);
-  VectorXd ys = k/2*(xs.array()*xs.array());
+  VectorXd ys = k/2*xs.array().pow(2);
   auto op_v = new OperatorSpline(xs, ys);
 
   auto id = new OperatorId();
+  auto R1 = new OperatorRn(1);
   auto R2 = new OperatorRn(2);
-  vector<Operator*> ops = {id, op_v, R2};
+  vector<Operator*> ops = {id, op_v, R1, R2};
 
   int num(2);
   VectorXi ns(num); ns << 0, 2;
-  
-  auto *basis = new Pwgto(ns, ops, 0, 0.01);  
+
+  double R0 = 1.1;
+  auto *basis = new Pwgto(ns, ops, 2, 0.01);  
   basis->ref_gs() << 1.0, 1.2;
-  basis->ref_Rs() << 0.0, 0.0;
-  basis->ref_Ps() << 0.0, 0.0;
+  basis->ref_Rs() << R0, R0;
+  basis->ref_Ps() << 0.5, 0.8;
   basis->SetUp();
 
-  MatrixXcd M1(num, num);
-  basis->Matrix(id, op_v, &M1);
-  EXPECT_NEAR(abs(M1(0,0)), 0.0, pow(10.0, -12.0));
-
-  auto *basis2 = new Pwgto(ns, ops, 2, 0.01);  
-  basis2->ref_gs() << 1.0, 1.2;
-  basis2->ref_Rs() << 0.0, 0.0;
-  basis2->ref_Ps() << 0.0, 0.0;
-  basis2->SetUp();
-
-  MatrixXcd M2(num, num);
-  basis2->Matrix(id, op_v, &M1);
-  basis2->Matrix(id, R2,   &M2);
-  M2 *= (k/2);
-
-  EXPECT_MATRIXXCD_NEAR(M1, M2, pow(10.0, -10.0));
+  MatrixXcd M0(num,num), M1(num,num), M2(num, num), MV(num,num);
+  basis->Matrix(id, op_v, &MV);
+  basis->Matrix(id, id,   &M0);
+  basis->Matrix(id, R1,   &M1);
+  basis->Matrix(id, R2,   &M2);
+  
+  M0 = (k/2)*M2 + k*R0*M1 + k/2*R0*R0*M0;  
+  EXPECT_MATRIXXCD_NEAR(M0, MV, pow(10.0, -10.0));
 }
 TEST(utest_pwgto, test_spline_dx) {
 
@@ -537,3 +470,33 @@ TEST(utest_pwgto, test_spline_dx) {
   delete basis;
     
 }
+TEST(utest_pwgto, test_poly) {
+
+  auto opid = new OperatorId();
+  int maxn = 2;
+  VectorXd cs(maxn+1); cs << 1.1, 0.3, 0.8;
+  auto opv1  = new OperatorPoly(maxn, cs);
+  VectorXd xs = VectorXd::LinSpaced(100, -5.0, 5.0);
+  VectorXd ys = cs[0] + cs[1]*xs.array() + cs[2]*xs.array().pow(2);
+  auto opv2 = new OperatorSpline(xs, ys);
+  
+  vector<Operator*> ops = {opid, opv1, opv2};
+
+  int num = 3;
+  VectorXi ns(num); ns << 0, 1, 2;
+
+  auto *basis = new Pwgto(ns, ops, 2, 0.01);
+  basis->ref_gs() << 1.0, 1.0, 1.0;
+  basis->ref_Rs() << 0.0, 0.0, 0.0;
+  basis->ref_Ps() << 0.0, 0.0, 0.0;
+  basis->SetUp();
+
+  MatrixXcd M_poly(num,num), M_spline(num,num);
+  basis->Matrix(opid, opv1, &M_poly);
+  basis->Matrix(opid, opv2, &M_spline);
+
+  double tol = pow(10.0, -10.0);
+  EXPECT_MATRIXXCD_NEAR(M_poly, M_spline, tol);
+}
+
+

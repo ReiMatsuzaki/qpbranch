@@ -158,10 +158,9 @@ namespace qpbranch {
     
   }  
   void Pwgto::At(Operator *op, const VectorXcd& cs, const VectorXd& xs, VectorXcd *res) {
-
     assert(is_setup_);
+    assert(buffer_map_.find(op)!=buffer_map_.end());
     buffer_map_[op]->At(this, cs, xs, res);
-
   }
   void Pwgto::DumpCon(int it) {
     

@@ -23,6 +23,9 @@ namespace qpbranch {
     } else if(optype == typeid(OperatorDa)) {
       auto opop = static_cast<OperatorDa*>(op);
       return new OpBufDa(ns, opop->id());
+    } else if(optype == typeid(OperatorPoly)) {
+      auto opop = static_cast<OperatorPoly*>(op);
+      return new OpBufPoly(ns, opop);
     } else if(optype == typeid(OperatorSpline)) {
       auto opop = static_cast<OperatorSpline*>(op);
       return new OpBufSpline(ns, basis->norder(), opop);
@@ -501,6 +504,61 @@ namespace qpbranch {
 	break;
       default:
 	assert(false||"invalid id");
+      }
+    }
+  }
+  OpBufPoly::OpBufPoly(const VectorXi& ns, OperatorPoly *op) : OpBufBasic(ns.size()), op_(op) {
+    int maxn = op->maxn_;
+    for(int A = 0; A < ns.size(); A++) {
+      this->InitZero(A, maxn+1);
+      for(int n = 0; n <= maxn; n++) {
+	ns_[A][n] = ns[A] + n;
+      }
+    }
+  }
+  void OpBufPoly::SetUp(Pwgto *basis) {
+    // Pontetial function is expressed as polynomial
+    //     V = sum_{n=0}^{nmax} c_n x^n
+    // To evaluate matrix element, V must be expanded at R0.
+    // To do this, consider binomial 
+    // (x+R0)^n = sum_k (n,k) x^k R0^{n-k}
+    // y^n      = sum_k (n,k) (x-R0)^k R0^{n-k}
+    cout << op_->cs_ << endl;
+    auto maxn = op_->maxn_;
+    for(int A = 0; A < basis->num(); A++) {
+      int  nA = basis->ns()[A];
+      auto R0 = basis->Rs()[A];
+      auto NA = basis->Ns()[A];
+      for(int n = 0; n <= maxn; n++) {
+	cs_[A][n] = 0.0;
+	ns_[A][n] = nA + n;
+      }
+      for(int n = 0; n < maxn; n++) {	
+	for(int k = 0; k <= n; k++) {
+	  cout << A << n << k << " : "
+	       << NA << " "
+	       << op_->cs_[n] << " "
+	       << Comb(n, k) << " "
+	       << pow(R0, n-k) << endl;
+	  cs_[A][k] += NA * op_->cs_[n] * Comb(n, k) * pow(R0, n-k);
+	}
+      }
+      //      cout << cs_[A] << endl;
+    }
+  }
+  void OpBufPoly::SetUp(Pwgto1c *basis) {
+    auto maxn = op_->maxn_;
+    for(int A = 0; A < basis->num_; A++) {
+      int  nA = basis->ns_[A];
+      auto R0 = basis->R0_;
+      auto NA = basis->Ns_[A];
+      for(int n = 0; n <= maxn; n++)
+	cs_[A][n] = 0.0;
+      for(int n = 0; n <= maxn; n++) {
+	ns_[A][n] = nA + n;
+	for(int k = 0; k <= n; k++) {
+	  cs_[A][n] += NA * op_->cs_[n] * Comb(n, k) * pow(R0, n-k);
+	}
       }
     }
   }

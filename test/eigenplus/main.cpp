@@ -50,6 +50,35 @@ TEST(TestEigenplus, TestZgesv) {
   EXPECT_VECTORXCD_EQ(Hx, b);
 
 }
+TEST(TestEigenplus, TestIntetDiag) {
+  complex<double> i(0,1);
+  int n = 3;
+  MatrixXcd H(n,n);
+
+  H <<
+    1.0,       0.5-0.3*i, 0.2+0.1*i,
+    0.5+0.3*i, 1.5,       0.1+0.3*i,
+    0.2-0.1*i, 0.1-0.3*i, 0.8;
+    
+  VectorXcd c0(n); c0 << 1.0, 2.0, 0.3;
+  c0 /= sqrt(c0.dot(c0));
+
+  // check EOM
+  double dt = 0.001;
+  VectorXcd cp = c0;
+  VectorXcd cm = c0;
+  IntetDiag(H, +dt, &cp);
+  IntetDiag(H, -dt, &cm);
+  VectorXcd idc1 = i*(cp-cm)/(2*dt);
+  VectorXcd Hc0 = H*c0;
+  EXPECT_VECTORXCD_NEAR(idc1, Hc0, 3*pow(10.0, -6));
+
+  // check norm conversion for long integration
+  IntetDiag(H, 11.4, &cp);
+  auto norm2 = real(cp.dot(cp));
+  EXPECT_NEAR(1.0, norm2, pow(10.0, -10.0));
+  
+}
 TEST(TestEigenplus, TestIntetGdiag) {
   complex<double> i(0,1);
   int n = 3;
@@ -117,11 +146,11 @@ TEST(TestEigenplus, TestIntetGdiagRabi) {
     auto t = it*dt;
 
     // analytic solution
-    auto w0 = Ea-Eb;
+    auto w0 = Eb-Ea;
     auto Omega = sqrt(w0*w0 + x*x);
     auto arg = Omega*t/2;
-    ce(0) = exp(+i*w0*t/2.0) * (cos(arg) - i*w0/Omega*sin(arg));
-    ce(1) = exp(-i*w0*t/2.0) * (x/(2*Omega)) * 2.0*i * sin(arg);
+    ce(0) = exp(-i*Ea*t) * exp(-i*w0*t/2.0) * (cos(arg) + i*w0/Omega*sin(arg));
+    ce(1) = exp(-i*Eb*t) * exp(+i*w0*t/2.0) * (x/(2*Omega)) * 2.0*i * sin(arg);
 
     // dump
     con.write_f("t", it, t);
@@ -135,7 +164,9 @@ TEST(TestEigenplus, TestIntetGdiagRabi) {
       IntetGdiag(H, S, dt, &c);
   }
 
-  EXPECT_DOUBLE_EQ(abs(c(0)), abs(ce(0)));
+  auto tol = pow(10.0, -7);
+
+  EXPECT_VECTORXCD_NEAR(c, ce, tol);
 }
 TEST(TestEigenplus, TestIntetGdiag_nume) {
   complex<double> i(0,1);

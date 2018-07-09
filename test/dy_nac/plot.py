@@ -46,6 +46,39 @@ def run():
         plt.savefig(join(dname, "p0.pdf"))
         plt.close()
 
+    man = mn.Man(root="_con_tully1".format(name));
+    xs = man['xs',0]
+    for v in ["v11", "v12", "v21", "v22"]:
+        ys = man[v,0]
+        plt.plot(xs, ys, label=v)
+    plt.legend()
+    plt.savefig("_fig_tully1/v.pdf")
+    plt.close()
+
+def run_delta():
+    man = mn.Man(root="_con_delta_tully1")
+    dir_fig = "_fig_delta_tully1"
+    if(not exists(dir_fig)):
+        os.makedirs(dir_fig)
+        
+    t = man['t',:]
+    
+    prob = man['prob',:]
+    plt.plot(t, prob[:,0])
+    plt.plot(t, prob[:,1])
+    plt.savefig(join(dir_fig, "prob.pdf"))
+    plt.close()
+
+    q0 = man["q0",:]
+    plt.plot(t, q0)
+    plt.savefig(join(dir_fig, "q0.pdf"))
+    plt.close()
+
+    p0 = man["p0",:]
+    plt.plot(t, p0)
+    plt.savefig(join(dir_fig, "p0.pdf"))
+    plt.close()    
+    
 def run_2state():
     man = mn.Man(root="_con_2state")
     ts = man["t",:]
@@ -64,6 +97,14 @@ def run_2state():
     plt.savefig(join(dname, "c_re.pdf"))
     plt.close()
 
+    pl0, = plt.plot(ts, calc[:,0].imag,  "-",   label="calc0")
+    pl1, = plt.plot(ts, calc[:,1].imag,  "-",   label="calc1")
+    plt.plot(       ts, exact[:,0].imag, "k--", label="exact0")
+    plt.plot(       ts, exact[:,1].imag, "k-.", label="exact1")
+    plt.legend()
+    plt.savefig(join(dname, "c_im.pdf"))
+    plt.close()
+
     pl0, = plt.plot(ts, abs(calc[:,0])**2,  "-",   label="calc0")
     pl1, = plt.plot(ts, abs(calc[:,1])**2,  "-",   label="calc1")
     plt.plot(       ts, abs(exact[:,0])**2, "k--", label="exact0")
@@ -73,6 +114,6 @@ def run_2state():
     plt.close()
 
 if __name__=="__main__":
-    #    run()
+    run()
     run_2state()
-    
+    run_delta()

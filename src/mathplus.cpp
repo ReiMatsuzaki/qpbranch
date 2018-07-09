@@ -8,6 +8,19 @@ namespace qpbranch {
   using std::complex;
   using std::runtime_error;
   using std::invalid_argument;
+  int Fact(int n) {
+    assert(0<=n);
+    int res(1);
+    for(int k = 1; k <= n; k++) {
+      res *= k;
+    }
+    return res;
+  }
+  int Comb(int n, int k) {
+    assert(0<=n);
+    assert(0<=k && k<=n);
+    return Fact(n) / (Fact(k) * Fact(n-k));
+  }
   void IntGto2N(int maxN, complex<double> a, VectorXcd *res) {
     assert(maxN >= 0);
     assert(a.real() > 0);
